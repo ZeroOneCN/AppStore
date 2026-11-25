@@ -7,6 +7,7 @@ import AppInfoParser from "app-info-parser";
 import forge from "node-forge";
 import yauzl from "yauzl";
 import { AppError } from "../infra/errors";
+import { extractIconFromApk, isSupportedImage } from "./apk-icon.service";
 import { createTempApkPath } from "./storage.service";
 
 /** APK 文件头（ZIP 本地文件头），用于快速判别非安装包 */
@@ -336,12 +337,18 @@ export async function parseApk(filePath: string): Promise<ParsedApk> {
     10,
   );
 
+  // 优先使用专门的图标解析（支持矢量图/自适应图标），解析器自带图标仅作兜底
+  const rawIcon = decodeIcon(info.icon) ?? decodeIcon(info.application?.icon);
+  const iconBuffer =
+    (await extractIconFromApk(filePath)) ??
+    (rawIcon && isSupportedImage(rawIcon) ? rawIcon : null);
+
   return {
     packageName,
     versionCode,
     versionName,
     minSdk: Number.isFinite(minSdkValue) ? minSdkValue : null,
-    iconBuffer: decodeIcon(info.icon) ?? decodeIcon(info.application?.icon),
+    iconBuffer,
     signFingerprint: await extractSignFingerprint(filePath),
   };
 }

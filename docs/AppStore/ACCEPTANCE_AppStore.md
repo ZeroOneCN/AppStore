@@ -237,3 +237,14 @@ HTTP 冒烟实测明细（种子数据：`smoke-pack`，真实 APK 4026 版，�
 | 接口描述 | 通过 | `/api/openapi` 输出 OpenAPI 3.1 描述（公开浏览、下载、更新检查与后台接口），配套 [API_AppStore.md](file:///c:/Code/AppStore/docs/AppStore/API_AppStore.md) |
 | Code 目录应用归档 | 通过 | 登录后台 API 批量创建并发布：爱健身 v1.9.5、应用商店 v1.0.0、全屋智能 v1.0.0；包裹管家已存在保持不变；LifeOS 因无 APK 建为草稿条目。公开列表由 1 个增至 5 个，详情页均返回 200 |
 | 构建与测试 | 通过 | `npm run typecheck` / `lint` / `build` 通过，`npm test` 47/47；新增页面 `/admin/apps`、`/admin/stats`、`/admin/logs`、`/admin/settings`、`/manifest.webmanifest`、`/robots.txt`、`/sitemap.xml`、`/api/openapi`、`/opengraph-image` 均返回 200 |
+
+### APK 矢量图标识别与 LifeOS 发布（B11）
+
+| 项目 | 结果 | 证据 |
+|---|---|---|
+| 自适应图标 | 通过 | 新增 `apk-icon.service.ts`：解析 `mipmap-anydpi-v26/ic_launcher.xml`，将背景 layer-list/渐变与前景 vector 合成为 108×108 SVG 后栅格化为 512×512 PNG |
+| 清单驱动解析 | 通过 | 先从 AndroidManifest 读取 `android:icon` / `roundIcon` 资源 ID，经 `resources.arsc` 解析真实文件；可识别 Flutter 包混淆后的 `res/9w.png`、`res/BW.xml` 等扁平资源名 |
+| 图标有效性校验 | 通过 | `parseApk` 先确认解析器返回的图标是真实图片（PNG/JPEG/WebP 魔数），无效时改走矢量提取，避免把二进制 XML 当 PNG 保存 |
+| 爱健身图标 | 通过 | 提取结果 512×512、97,285 字节，蓝色渐变 + 白色肌肉线条，已通过图标接口补齐（`iconUrl=/api/assets/icons/cmww2f1mh00038fbgtgiytzcm.png`） |
+| LifeOS 发布 | 通过 | 上传 `LifeOS-1.0.0-2010.apk`（63.5 MB，versionCode 2010，包名 `com.lifeos.mobile`）并发布为当前版本；图标 512×512、34,429 字节（白底红色层叠图形） |
+| 验证 | 通过 | 公开列表 5 个应用图标均返回 200 image/png；`/api/public/apps/lifeos` 当前版本 1.0.0 (2010)；`typecheck` / `lint` / `test` 47/47 / `build` 全部通过 |

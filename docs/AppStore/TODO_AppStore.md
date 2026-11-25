@@ -9,7 +9,7 @@
 | MIUI 自更新最终安装 | F11 已完成自更新弹窗、下载与安装器调起；MIUI 对 162 MB 调试包云端扫描超时，未完成最后安装 | 换用 release 包（51.6 MB）或等待扫描完成后重试；确认版本号递增后再次验证 |
 | 真机断点续传 | 接口 Range 206 已由 api-smoke 覆盖，客户端续传为代码走查 | 下载大文件途中关闭 Wi-Fi/切飞行模式，再重进下载页确认从断点继续且最终 SHA-256 一致 |
 | admin-smoke 全量 | 示例包名 `com.packkeeper.packkeeper` 与现有应用唯一约束冲突，创建步骤 400 | 在干净数据库执行，或把脚本示例包名换成空闲包名并同步 `SMOKE_APK` |
-| LifeOS 安装包 | `LifeOS/mobile` 仅有 P1 骨架，尚未构建 APK，商店中为草稿条目 | 执行 `flutter build apk --release` 后在后台该条目上传版本并发布 |
+| LifeOS 安装包 | 已上传 `LifeOS-1.0.0-2010.apk` 并发布为当前版本（v1.0.0 / versionCode 2010），图标由 APK 自适应图标自动生成 | 后续发版递增 versionCode 并在后台补传即可 |
 
 ## 2. 配置与上线
 
@@ -20,7 +20,7 @@
 | 防火墙 | 放行 TCP 3000；反向代理场景仅本机监听并放行 443 |
 | 备份 | `data/`、`storage/`、`.env` 需定期备份；当前未配置自动备份任务 |
 | 客户端自更新 | 已发布「应用商店」应用（`packageName=com.appstore.appstore_client`，v1.0.0 / versionCode 1）；后续发版只需递增 versionCode 并重新上传 |
-| 应用归档 | Code 目录下可安装项目已上传：爱健身 v1.9.5、应用商店 v1.0.0、全屋智能 v1.0.0；LifeOS 为草稿条目，构建出 APK 后补传即可 |
+| 应用归档 | Code 目录下可安装项目已上传并发布：爱健身 v1.9.5、应用商店 v1.0.0、全屋智能 v1.0.0、LifeOS v1.0.0（爱健身图标已补传） |
 
 ## 3. 已知限制
 
