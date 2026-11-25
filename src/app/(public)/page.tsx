@@ -25,9 +25,9 @@ function readParam(params: Record<string, string | string[] | undefined>, key: s
 }
 
 /**
- * 应用墙数据区：读取筛选参数、查询数据并渲染卡片网格。
+ * 应用墙数据区：读取筛选参数、查询数据并渲染居中布局的卡片网格。
  * @param props.searchParams 地址栏查询参数
- * @returns 筛选栏与卡片网格
+ * @returns 品牌区、筛选栏与卡片网格
  */
 async function AppWall({ searchParams }: { searchParams: SearchParams }) {
   await connection();
@@ -58,35 +58,46 @@ async function AppWall({ searchParams }: { searchParams: SearchParams }) {
   const filtered = Boolean(filters.q || filters.type || filters.category || filters.tag);
 
   return (
-    <>
-      <div className="mb-5 flex flex-wrap items-end justify-between gap-2">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">应用墙</h1>
-          <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
-            {filtered ? `筛选出 ${items.length} 个作品` : `共 ${items.length} 个作品`}
-          </p>
-        </div>
+    <div className="page-center py-10 sm:py-14">
+      {/* 品牌区：大标题居中，作为页面视觉重心 */}
+      <header className="mx-auto max-w-3xl text-center">
+        <span className="inline-flex items-center gap-2 rounded-full border border-brand/15 bg-brand/[0.06] px-3 py-1 text-[11px] font-medium tracking-wide text-brand">
+          <span className="h-1.5 w-1.5 rounded-full bg-brand" />
+          {filtered ? "筛选结果" : "个人应用商店"}
+        </span>
+        <h1 className="mt-5 text-[34px] leading-[1.1] font-semibold tracking-[-0.02em] sm:text-5xl">
+          {filtered ? "找到这些作品" : "发现你的应用"}
+        </h1>
+        <p className="mx-auto mt-3 max-w-xl text-[15px] leading-6 text-neutral-500 dark:text-neutral-400">
+          {filtered
+            ? `共 ${items.length} 个符合条件的作品，试试调整筛选条件`
+            : `共 ${items.length} 个作品 · 自建分发，下载即安装`}
+        </p>
+      </header>
+
+      <div className="mx-auto mt-8 w-full max-w-5xl">
+        <FilterBar categories={categories} tags={tags} />
       </div>
 
-      <FilterBar categories={categories} tags={tags} />
-
-      {items.length === 0 ? (
-        <div className="mt-8 grid place-items-center rounded-2xl border border-dashed border-neutral-300 px-6 py-16 text-center dark:border-neutral-700">
-          <p className="text-base font-medium">
-            {filtered ? "没有符合条件的应用" : "还没有发布任何应用"}
-          </p>
-          <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
-            {filtered ? "试试更换关键词或清空筛选条件" : "管理员发布应用后会显示在这里"}
-          </p>
-        </div>
-      ) : (
-        <div className="mt-4 grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(240px,1fr))]">
-          {items.map((app) => (
-            <AppCard key={app.id} app={app} />
-          ))}
-        </div>
-      )}
-    </>
+      <div className="mx-auto w-full max-w-6xl">
+        {items.length === 0 ? (
+          <div className="card-apple mx-auto mt-6 grid max-w-lg place-items-center px-6 py-14 text-center">
+            <p className="text-base font-medium">
+              {filtered ? "没有符合条件的应用" : "还没有发布任何应用"}
+            </p>
+            <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
+              {filtered ? "试试更换关键词或清空筛选条件" : "管理员发布应用后会显示在这里"}
+            </p>
+          </div>
+        ) : (
+          <div className="mt-6 grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(240px,1fr))] sm:gap-4">
+            {items.map((app) => (
+              <AppCard key={app.id} app={app} />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -96,12 +107,16 @@ async function AppWall({ searchParams }: { searchParams: SearchParams }) {
  */
 function WallSkeleton() {
   return (
-    <div className="animate-pulse">
-      <div className="mb-5 h-8 w-32 rounded-md bg-neutral-200 dark:bg-neutral-800" />
-      <div className="h-28 rounded-2xl bg-neutral-200 dark:bg-neutral-800" />
-      <div className="mt-4 grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(240px,1fr))]">
+    <div className="page-center animate-pulse py-10 sm:py-14">
+      <div className="mx-auto w-full max-w-3xl">
+        <div className="mx-auto h-5 w-24 rounded-full bg-black/[0.06] dark:bg-white/10" />
+        <div className="mx-auto mt-5 h-10 w-72 max-w-full rounded-xl bg-black/[0.06] dark:bg-white/10" />
+        <div className="mx-auto mt-3 h-4 w-56 max-w-full rounded bg-black/[0.05] dark:bg-white/[0.07]" />
+      </div>
+      <div className="mx-auto mt-8 h-36 w-full max-w-5xl rounded-2xl bg-black/[0.05] dark:bg-white/[0.07]" />
+      <div className="mx-auto mt-6 grid w-full max-w-6xl gap-3 [grid-template-columns:repeat(auto-fill,minmax(240px,1fr))] sm:gap-4">
         {Array.from({ length: 6 }).map((_, index) => (
-          <div key={index} className="h-40 rounded-2xl bg-neutral-200 dark:bg-neutral-800" />
+          <div key={index} className="h-40 rounded-2xl bg-black/[0.05] dark:bg-white/[0.07]" />
         ))}
       </div>
     </div>
@@ -115,7 +130,7 @@ function WallSkeleton() {
  */
 export default function HomePage({ searchParams }: { searchParams: SearchParams }) {
   return (
-    <section className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
+    <section className="mx-auto w-full max-w-6xl px-4 sm:px-6">
       <Suspense fallback={<WallSkeleton />}>
         <AppWall searchParams={searchParams} />
       </Suspense>

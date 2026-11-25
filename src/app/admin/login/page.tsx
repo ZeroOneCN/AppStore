@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BrandLogo } from "@/components/brand-logo";
 import { LoginForm } from "@/components/admin/login-form";
 
 /**
@@ -9,28 +10,22 @@ export default function AdminLoginPage() {
   const siteName = process.env.NEXT_PUBLIC_SITE_NAME ?? "我的应用仓库";
 
   return (
-    <div className="grid min-h-screen place-items-center bg-neutral-50 px-4 text-neutral-900 dark:bg-neutral-950 dark:text-neutral-50">
+    <div className="grid min-h-screen place-items-center px-4 py-12 text-neutral-900 dark:text-neutral-50">
       <div className="w-full max-w-sm">
-        <div className="mb-6 flex items-center gap-2.5">
-          <span className="grid h-9 w-9 place-items-center rounded-lg bg-indigo-600 text-sm font-bold text-white">
-            A
-          </span>
-          <div>
-            <p className="text-sm font-semibold">{siteName}</p>
-            <p className="text-xs text-neutral-500 dark:text-neutral-400">管理后台</p>
-          </div>
+        <div className="mb-7 flex flex-col items-center text-center">
+          <BrandLogo size={64} />
+          <p className="mt-4 text-lg font-semibold tracking-tight">{siteName}</p>
+          <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">管理后台</p>
         </div>
 
-        <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
-          <h1 className="mb-4 text-lg font-semibold">管理员登录</h1>
+        <div className="card-apple p-6 sm:p-7">
+          <h1 className="mb-5 text-center text-base font-semibold tracking-tight">管理员登录</h1>
           <LoginForm />
-          <p className="mt-4 text-center text-xs text-neutral-400">
-            连续输错 5 次将锁定 5 分钟
-          </p>
+          <p className="mt-5 text-center text-[11px] text-neutral-400">连续输错 5 次将锁定 5 分钟</p>
         </div>
 
-        <p className="mt-4 text-center text-xs text-neutral-500 dark:text-neutral-400">
-          <Link href="/" className="transition hover:text-indigo-600 dark:hover:text-indigo-400">
+        <p className="mt-5 text-center text-xs text-neutral-500 dark:text-neutral-400">
+          <Link href="/" className="transition hover:text-brand">
             ← 返回前台
           </Link>
         </p>

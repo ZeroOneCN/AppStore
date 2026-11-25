@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { BrandLogo } from "@/components/brand-logo";
 
 /**
  * 全局错误边界，展示通用失败提示并记录错误。
@@ -20,17 +21,14 @@ export default function GlobalError({
   }, [error]);
 
   return (
-    <div className="grid min-h-[60vh] place-items-center px-6 text-center">
-      <div>
-        <h1 className="text-xl font-semibold">页面加载失败</h1>
+    <div className="grid min-h-screen place-items-center px-6 text-center">
+      <div className="flex flex-col items-center">
+        <BrandLogo size={56} className="opacity-90" />
+        <h1 className="mt-6 text-xl font-semibold tracking-tight">页面加载失败</h1>
         <p className="mt-2 max-w-md text-sm text-neutral-500 dark:text-neutral-400">
           {error.message || "发生了未预期的错误，请稍后重试。"}
         </p>
-        <button
-          type="button"
-          onClick={reset}
-          className="mt-5 inline-flex rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-500"
-        >
+        <button type="button" onClick={reset} className="btn-primary mt-6">
           重新加载
         </button>
       </div>

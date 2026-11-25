@@ -17,28 +17,28 @@ async function AppsContent() {
     <>
       <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight">应用管理</h1>
+          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">应用管理</h1>
           <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
             共 {apps.length} 个应用，包含草稿与私有应用
           </p>
         </div>
         <Link
           href="/admin/apps/new"
-          className="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-500"
+          className="btn-primary"
         >
           新建应用
         </Link>
       </div>
 
       {apps.length === 0 ? (
-        <div className="grid place-items-center rounded-2xl border border-dashed border-neutral-300 px-6 py-16 text-center dark:border-neutral-700">
+        <div className="card-apple grid place-items-center px-6 py-16 text-center">
           <p className="text-base font-medium">还没有应用</p>
           <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
             先创建应用，再上传 APK 或填写网页链接
           </p>
           <Link
             href="/admin/apps/new"
-            className="mt-5 inline-flex rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-500"
+            className="btn-primary mt-5"
           >
             新建应用
           </Link>
@@ -49,7 +49,7 @@ async function AppsContent() {
             <Link
               key={app.id}
               href={`/admin/apps/${app.id}`}
-              className="flex flex-col gap-3 rounded-2xl border border-neutral-200 bg-white p-4 transition hover:border-indigo-300 hover:shadow-md dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-indigo-500/60"
+              className="flex flex-col gap-3 rounded-2xl border border-black/[0.06] bg-white/85 p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)] backdrop-blur-sm transition duration-300 hover:-translate-y-0.5 hover:border-brand/30 hover:shadow-[0_18px_40px_-28px_rgba(30,81,238,0.65)] dark:border-white/10 dark:bg-[#1c1c1e]/85"
             >
               <div className="flex items-start gap-3">
                 <AppIcon name={app.name} iconUrl={app.iconUrl} size={48} />

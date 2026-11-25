@@ -47,7 +47,7 @@ export function ScreenshotGallery({ images, name }: { images: string[]; name: st
 
   if (images.length === 0) {
     return (
-      <div className="grid place-items-center rounded-xl border border-dashed border-neutral-300 py-10 text-sm text-neutral-400 dark:border-neutral-700">
+      <div className="grid place-items-center rounded-xl border border-dashed border-black/10 py-10 text-sm text-neutral-400 dark:border-white/10">
         暂无截图
       </div>
     );
@@ -61,7 +61,7 @@ export function ScreenshotGallery({ images, name }: { images: string[]; name: st
             key={src}
             type="button"
             onClick={() => setCurrent(index)}
-            className="relative aspect-[9/16] overflow-hidden rounded-xl border border-neutral-200 bg-neutral-100 transition hover:border-indigo-300 dark:border-neutral-800 dark:bg-neutral-900"
+            className="relative aspect-[9/16] overflow-hidden rounded-xl border border-black/[0.06] bg-neutral-100 transition duration-300 hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-lg dark:border-white/10 dark:bg-neutral-900"
             aria-label={`查看第 ${index + 1} 张截图`}
           >
             <Image

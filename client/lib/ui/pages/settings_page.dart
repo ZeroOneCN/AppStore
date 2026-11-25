@@ -5,6 +5,7 @@ import '../../core/api_exception.dart';
 import '../../core/app_config.dart';
 import '../../data/app_repository.dart';
 import '../../services/install_service.dart';
+import '../widgets/brand_mark.dart';
 
 /// 设置页：维护服务端基地址、测试连接，并提供安装权限与版本信息。
 class SettingsPage extends StatefulWidget {
@@ -16,8 +17,9 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  final TextEditingController _controller =
-      TextEditingController(text: AppConfig.instance.baseUrl);
+  final TextEditingController _controller = TextEditingController(
+    text: AppConfig.instance.baseUrl,
+  );
 
   bool _saving = false;
   bool _testing = false;
@@ -90,7 +92,9 @@ class _SettingsPageState extends State<SettingsPage> {
       final apps = await AppRepository.instance.listApps();
       stopwatch.stop();
       if (!mounted) return;
-      _setMessage('连接成功，获取到 ${apps.length} 个应用（${stopwatch.elapsedMilliseconds} ms）');
+      _setMessage(
+        '连接成功，获取到 ${apps.length} 个应用（${stopwatch.elapsedMilliseconds} ms）',
+      );
     } on ApiException catch (error) {
       if (!mounted) return;
       _setMessage('连接失败：${error.message}', isError: true);
@@ -113,7 +117,9 @@ class _SettingsPageState extends State<SettingsPage> {
 
   /// 使用系统浏览器打开商店网页版。
   Future<void> _openWebStore() async {
-    final opened = await InstallService.instance.openUrl(AppConfig.instance.baseUrl);
+    final opened = await InstallService.instance.openUrl(
+      AppConfig.instance.baseUrl,
+    );
     if (!mounted) return;
     if (!opened) _setMessage('无法打开浏览器', isError: true);
   }
@@ -151,8 +157,6 @@ class _SettingsPageState extends State<SettingsPage> {
                   decoration: const InputDecoration(
                     hintText: 'http://192.168.1.10:3000',
                     prefixIcon: Icon(Icons.dns_rounded),
-                    border: OutlineInputBorder(),
-                    isDense: true,
                   ),
                   onSubmitted: (_) => _save(),
                 ),
@@ -166,7 +170,9 @@ class _SettingsPageState extends State<SettingsPage> {
                             ? const SizedBox(
                                 width: 16,
                                 height: 16,
-                                child: CircularProgressIndicator(strokeWidth: 2),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
                               )
                             : const Icon(Icons.save_rounded),
                         label: Text(_saving ? '保存中…' : '保存'),
@@ -180,7 +186,9 @@ class _SettingsPageState extends State<SettingsPage> {
                             ? const SizedBox(
                                 width: 16,
                                 height: 16,
-                                child: CircularProgressIndicator(strokeWidth: 2),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
                               )
                             : const Icon(Icons.wifi_tethering_rounded),
                         label: Text(_testing ? '测试中…' : '测试连接'),
@@ -219,7 +227,9 @@ class _SettingsPageState extends State<SettingsPage> {
             child: Row(
               children: [
                 Icon(
-                  _canInstall == true ? Icons.verified_rounded : Icons.info_outline_rounded,
+                  _canInstall == true
+                      ? Icons.verified_rounded
+                      : Icons.info_outline_rounded,
                   color: _canInstall == true
                       ? theme.colorScheme.primary
                       : theme.colorScheme.outline,
@@ -246,7 +256,14 @@ class _SettingsPageState extends State<SettingsPage> {
             subtitle: '个人自建应用商店客户端',
             child: Column(
               children: [
-                _InfoRow(label: '版本', value: info == null ? '—' : 'v${info.version}（${info.buildNumber}）'),
+                const BrandMark(size: 48),
+                const SizedBox(height: 14),
+                _InfoRow(
+                  label: '版本',
+                  value: info == null
+                      ? '—'
+                      : 'v${info.version}（${info.buildNumber}）',
+                ),
                 _InfoRow(label: '包名', value: info?.packageName ?? '—'),
                 _InfoRow(label: '当前地址', value: AppConfig.instance.baseUrl),
                 const SizedBox(height: 10),
@@ -265,7 +282,9 @@ class _SettingsPageState extends State<SettingsPage> {
           Text(
             '下载的安装包来自你自建的商店服务端，安装前会校验 SHA-256，下载中断支持断点续传。',
             textAlign: TextAlign.center,
-            style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.outline,
+            ),
           ),
         ],
       ),
@@ -288,22 +307,28 @@ class _SectionCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.6)),
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.45),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             title,
-            style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
           ),
           if (subtitle != null) ...[
             const SizedBox(height: 2),
             Text(
               subtitle!,
-              style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.outline,
+              ),
             ),
           ],
           const SizedBox(height: 12),
@@ -334,12 +359,12 @@ class _InfoRow extends StatelessWidget {
             width: 76,
             child: Text(
               label,
-              style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.outline,
+              ),
             ),
           ),
-          Expanded(
-            child: Text(value, style: theme.textTheme.bodySmall),
-          ),
+          Expanded(child: Text(value, style: theme.textTheme.bodySmall)),
         ],
       ),
     );

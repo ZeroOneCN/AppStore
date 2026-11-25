@@ -18,6 +18,8 @@ export function AppIcon({
   iconUrl: string | null;
   size?: number;
 }) {
+  const radius = Math.round(size * 0.24);
+
   if (iconUrl) {
     return (
       <Image
@@ -26,8 +28,8 @@ export function AppIcon({
         width={size}
         height={size}
         unoptimized
-        className="shrink-0 rounded-xl border border-neutral-200/70 bg-white object-cover dark:border-neutral-700"
-        style={{ width: size, height: size }}
+        className="shrink-0 border border-black/[0.06] bg-white object-cover dark:border-white/10"
+        style={{ width: size, height: size, borderRadius: radius }}
       />
     );
   }
@@ -35,8 +37,8 @@ export function AppIcon({
   return (
     <span
       aria-hidden
-      className="grid shrink-0 place-items-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 font-semibold text-white"
-      style={{ width: size, height: size, fontSize: Math.round(size * 0.4) }}
+      className="grid shrink-0 place-items-center bg-gradient-to-br from-brand to-[#5b83ff] font-semibold text-white shadow-[0_8px_18px_-10px_rgba(30,81,238,0.9)]"
+      style={{ width: size, height: size, fontSize: Math.round(size * 0.4), borderRadius: radius }}
     >
       {name.trim().charAt(0).toUpperCase() || "A"}
     </span>
@@ -58,20 +60,20 @@ export function AppCard({ app }: { app: AppCardDto }) {
   return (
     <Link
       href={`/apps/${app.slug}`}
-      className="group flex flex-col gap-3 rounded-2xl border border-neutral-200 bg-white p-4 transition hover:border-indigo-300 hover:shadow-md dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-indigo-500/60"
+      className="group flex flex-col gap-3 rounded-[22px] border border-black/[0.06] bg-white/85 p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)] backdrop-blur-sm transition duration-300 hover:-translate-y-0.5 hover:border-brand/30 hover:shadow-[0_18px_40px_-28px_rgba(30,81,238,0.65)] dark:border-white/10 dark:bg-[#1c1c1e]/85 dark:hover:border-brand/40"
     >
       <div className="flex items-start gap-3">
         <AppIcon name={app.name} iconUrl={app.iconUrl} />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <h3 className="truncate text-base font-semibold">{app.name}</h3>
+            <h3 className="truncate text-[15px] font-semibold tracking-tight">{app.name}</h3>
             {app.pinned ? (
               <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
                 置顶
               </span>
             ) : null}
           </div>
-          <p className="mt-1 line-clamp-2 text-sm leading-5 text-neutral-500 dark:text-neutral-400">
+          <p className="mt-1 line-clamp-2 text-[13px] leading-5 text-neutral-500 dark:text-neutral-400">
             {app.summary}
           </p>
         </div>
@@ -87,20 +89,20 @@ export function AppCard({ app }: { app: AppCardDto }) {
         >
           {TYPE_LABEL[app.type]}
         </span>
-        <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[11px] text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300">
+        <span className="rounded-full bg-black/[0.04] px-2 py-0.5 text-[11px] text-neutral-600 dark:bg-white/[0.08] dark:text-neutral-300">
           {app.category}
         </span>
         {app.tags.slice(0, 2).map((tag) => (
           <span
             key={tag}
-            className="rounded-full border border-neutral-200 px-2 py-0.5 text-[11px] text-neutral-500 dark:border-neutral-700 dark:text-neutral-400"
+            className="rounded-full border border-black/[0.06] px-2 py-0.5 text-[11px] text-neutral-500 dark:border-white/10 dark:text-neutral-400"
           >
             {tag}
           </span>
         ))}
       </div>
 
-      <div className="mt-auto flex items-center justify-between gap-2 border-t border-neutral-100 pt-3 text-xs text-neutral-500 dark:border-neutral-800 dark:text-neutral-400">
+      <div className="mt-auto flex items-center justify-between gap-2 border-t border-black/[0.05] pt-3 text-[11px] text-neutral-500 dark:border-white/[0.08] dark:text-neutral-400">
         <span className="truncate">
           {app.currentVersion
             ? `v${app.currentVersion.versionName}`

@@ -25,10 +25,10 @@ export function AdminNav() {
           <Link
             key={item.href}
             href={item.href}
-            className={`rounded-lg px-2.5 py-1.5 transition ${
+            className={`rounded-full px-3 py-1.5 text-[13px] transition ${
               active
-                ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300"
-                : "text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
+                ? "bg-brand/10 font-medium text-brand"
+                : "text-neutral-600 hover:bg-black/[0.04] dark:text-neutral-300 dark:hover:bg-white/10"
             }`}
           >
             {item.label}

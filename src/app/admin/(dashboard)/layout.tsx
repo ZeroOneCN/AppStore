@@ -2,12 +2,13 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
+import { BrandLogo } from "@/components/brand-logo";
 import { AdminNav } from "@/components/admin/admin-nav";
 import { LogoutButton } from "@/components/admin/logout-button";
 import { requireAdmin } from "@/server/http/session";
 
 /**
- * 后台外壳：校验管理员会话并渲染导航。
+ * 后台外壳：校验管理员会话并渲染毛玻璃导航。
  * @param props.children 页面内容
  * @returns 后台布局
  */
@@ -22,12 +23,13 @@ async function AdminShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-50 text-neutral-900 dark:bg-neutral-950 dark:text-neutral-50">
-      <header className="border-b border-neutral-200/70 bg-white/90 backdrop-blur dark:border-neutral-800/80 dark:bg-neutral-950/90">
-        <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
-          <div className="flex min-w-0 items-center gap-4">
-            <Link href="/admin/apps" className="shrink-0 text-sm font-semibold">
-              管理后台
+    <div className="flex min-h-screen flex-col text-neutral-900 dark:text-neutral-50">
+      <header className="glass-bar sticky top-0 z-20">
+        <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between gap-3 px-4 sm:h-16 sm:px-6">
+          <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+            <Link href="/admin/apps" className="flex shrink-0 items-center gap-2">
+              <BrandLogo size={28} />
+              <span className="text-[15px] font-semibold tracking-tight">管理后台</span>
             </Link>
             <AdminNav />
           </div>
@@ -37,7 +39,7 @@ async function AdminShell({ children }: { children: React.ReactNode }) {
               href="/"
               target="_blank"
               rel="noreferrer"
-              className="rounded-lg border border-neutral-200 px-2.5 py-1.5 transition hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800"
+              className="rounded-full border border-black/10 px-2.5 py-1.5 transition hover:bg-white/70 dark:border-white/12 dark:hover:bg-white/10"
             >
               查看前台
             </Link>
@@ -45,7 +47,9 @@ async function AdminShell({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </header>
-      <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6">{children}</main>
+      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col justify-center px-4 py-8 sm:px-6 sm:py-10">
+        {children}
+      </main>
     </div>
   );
 }
@@ -59,7 +63,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   return (
     <Suspense
       fallback={
-        <div className="grid min-h-screen place-items-center bg-neutral-50 text-sm text-neutral-500 dark:bg-neutral-950 dark:text-neutral-400">
+        <div className="grid min-h-screen place-items-center text-sm text-neutral-500 dark:text-neutral-400">
           正在校验登录状态…
         </div>
       }

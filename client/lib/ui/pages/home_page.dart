@@ -7,6 +7,7 @@ import '../../core/app_config.dart';
 import '../../data/app_repository.dart';
 import '../../data/models.dart';
 import '../widgets/app_card.dart';
+import '../widgets/brand_mark.dart';
 import '../widgets/state_views.dart';
 import 'app_detail_page.dart';
 
@@ -69,8 +70,13 @@ class _HomePageState extends State<HomePage> {
       List<String>? categories;
       if (_categories.isEmpty) {
         final all = await AppRepository.instance.listApps();
-        categories = all.map((item) => item.category).where((item) => item.isNotEmpty).toSet().toList()
-          ..sort();
+        categories =
+            all
+                .map((item) => item.category)
+                .where((item) => item.isNotEmpty)
+                .toSet()
+                .toList()
+              ..sort();
       }
 
       if (!mounted) return;
@@ -106,7 +112,9 @@ class _HomePageState extends State<HomePage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('应用商店'),
+        title: const Row(
+          children: [BrandMark(size: 26), SizedBox(width: 10), Text('应用商店')],
+        ),
         actions: [
           PopupMenuButton<String>(
             initialValue: _sort,
@@ -132,20 +140,14 @@ class _HomePageState extends State<HomePage> {
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 6),
+            padding: const EdgeInsets.fromLTRB(16, 6, 16, 10),
             child: TextField(
               controller: _searchController,
               onChanged: _onSearchChanged,
               textInputAction: TextInputAction.search,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 hintText: '搜索应用名称或简介',
-                prefixIcon: const Icon(Icons.search_rounded),
-                isDense: true,
-                filled: true,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
+                prefixIcon: Icon(Icons.search_rounded, size: 20),
               ),
             ),
           ),
@@ -193,7 +195,9 @@ class _HomePageState extends State<HomePage> {
                     label: category,
                     selected: _category == category,
                     onSelected: () {
-                      setState(() => _category = _category == category ? '' : category);
+                      setState(
+                        () => _category = _category == category ? '' : category,
+                      );
                       _load();
                     },
                   ),
@@ -225,7 +229,9 @@ class _HomePageState extends State<HomePage> {
               height: constraints.maxHeight,
               child: EmptyView(
                 title: '没有找到应用',
-                subtitle: _searchController.text.isEmpty ? '等待管理员发布应用' : '试试更换关键词或筛选条件',
+                subtitle: _searchController.text.isEmpty
+                    ? '等待管理员发布应用'
+                    : '试试更换关键词或筛选条件',
                 icon: Icons.search_off_rounded,
               ),
             ),
@@ -238,17 +244,19 @@ class _HomePageState extends State<HomePage> {
       onRefresh: _load,
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final columns = (constraints.maxWidth ~/ 170).clamp(2, 5);
-          final textScale = MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 1.6);
-          final extent = 172.0 * textScale;
+          final columns = (constraints.maxWidth ~/ 172).clamp(2, 5);
+          final textScale = MediaQuery.textScalerOf(context)
+              .scale(1)
+              .clamp(1.0, 1.6);
+          final extent = 182.0 * textScale;
 
           return GridView.builder(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(12, 4, 12, 16),
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: columns,
-              mainAxisSpacing: 10,
-              crossAxisSpacing: 10,
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
               mainAxisExtent: extent,
             ),
             itemCount: _apps.length,
@@ -259,7 +267,8 @@ class _HomePageState extends State<HomePage> {
                 onTap: () {
                   Navigator.of(context).push(
                     MaterialPageRoute<void>(
-                      builder: (_) => AppDetailPage(slug: app.slug, initialName: app.name),
+                      builder: (_) =>
+                          AppDetailPage(slug: app.slug, initialName: app.name),
                     ),
                   );
                 },
@@ -281,10 +290,10 @@ class _ChipRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 40,
+      height: 38,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
         itemCount: children.length,
         separatorBuilder: (context, index) => const SizedBox(width: 8),
         itemBuilder: (context, index) => Center(child: children[index]),
@@ -295,7 +304,11 @@ class _ChipRow extends StatelessWidget {
 
 /// 紧凑的筛选标签。
 class _FilterChip extends StatelessWidget {
-  const _FilterChip({required this.label, required this.selected, required this.onSelected});
+  const _FilterChip({
+    required this.label,
+    required this.selected,
+    required this.onSelected,
+  });
 
   final String label;
   final bool selected;
@@ -303,11 +316,21 @@ class _FilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return ChoiceChip(
       label: Text(label),
       selected: selected,
       onSelected: (_) => onSelected(),
-      labelStyle: const TextStyle(fontSize: 12),
+      showCheckmark: false,
+      selectedColor: scheme.primary,
+      backgroundColor: scheme.surfaceContainerHighest.withValues(alpha: 0.6),
+      side: BorderSide.none,
+      shape: const StadiumBorder(),
+      labelStyle: TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w500,
+        color: selected ? Colors.white : scheme.onSurfaceVariant,
+      ),
       visualDensity: VisualDensity.compact,
       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
     );

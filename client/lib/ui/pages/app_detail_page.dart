@@ -77,7 +77,9 @@ class _AppDetailPageState extends State<AppDetailPage> {
           fileKey: '${detail.app.slug}-${release.versionCode}',
           loadRelease: () async {
             // 每次开始下载前重新取票据，避免使用过期签名地址
-            final ticket = await AppRepository.instance.downloadTicket(release.id);
+            final ticket = await AppRepository.instance.downloadTicket(
+              release.id,
+            );
             return release.copyWith(downloadUrl: ticket);
           },
         ),
@@ -89,7 +91,8 @@ class _AppDetailPageState extends State<AppDetailPage> {
   Future<void> _openWeb(String url) async {
     final opened = await InstallService.instance.openUrl(url);
     if (!opened && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('无法打开该链接')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('无法打开该链接')));
     }
   }
 
@@ -119,15 +122,21 @@ class _AppDetailPageState extends State<AppDetailPage> {
     final detail = _detail;
 
     return Scaffold(
-      appBar: AppBar(title: Text(detail?.app.name ?? widget.initialName ?? '应用详情')),
+      appBar: AppBar(
+        title: Text(detail?.app.name ?? widget.initialName ?? '应用详情'),
+      ),
       body: _buildBody(detail),
     );
   }
 
   /// 按加载状态构建页面主体。
   Widget _buildBody(AppDetail? detail) {
-    if (_loading && detail == null) return const LoadingView(message: '正在加载详情…');
-    if (_error != null && detail == null) return ErrorRetryView(message: _error!, onRetry: _load);
+    if (_loading && detail == null) {
+      return const LoadingView(message: '正在加载详情…');
+    }
+    if (_error != null && detail == null) {
+      return ErrorRetryView(message: _error!, onRetry: _load);
+    }
     if (detail == null) return const SizedBox.shrink();
 
     final theme = Theme.of(context);
@@ -138,62 +147,63 @@ class _AppDetailPageState extends State<AppDetailPage> {
       onRefresh: _load,
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 36),
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          // 头部信息居中展示，贴近 iOS 应用详情页
+          Column(
             children: [
-              AppIcon(name: app.name, iconUrl: app.iconUrl, size: 72),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            app.name,
-                            style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
-                          ),
-                        ),
-                        if (app.pinned) ...[
-                          const SizedBox(width: 6),
-                          Icon(Icons.push_pin_rounded, size: 16, color: theme.colorScheme.tertiary),
-                        ],
-                      ],
+              AppIcon(name: app.name, iconUrl: app.iconUrl, size: 84),
+              const SizedBox(height: 14),
+              Text(
+                app.name,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  _Badge(
+                    text: app.isAndroid ? 'Android' : '网页',
+                    color: app.isAndroid
+                        ? const Color(0xFF059669)
+                        : const Color(0xFF0284C7),
+                  ),
+                  _Badge(text: app.category, color: theme.colorScheme.primary),
+                  if (app.pinned)
+                    _Badge(text: '置顶', color: const Color(0xFFD97706)),
+                  ...app.tags.map(
+                    (tag) => _Badge(
+                      text: tag,
+                      color: theme.colorScheme.onSurfaceVariant,
                     ),
-                    const SizedBox(height: 4),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 4,
-                      children: [
-                        _Badge(
-                          text: app.isAndroid ? 'Android' : '网页',
-                          color: app.isAndroid ? const Color(0xFF059669) : const Color(0xFF0284C7),
-                        ),
-                        _Badge(text: app.category, color: theme.colorScheme.primary),
-                        ...app.tags.map(
-                          (tag) => _Badge(text: tag, color: theme.colorScheme.outline),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      app.summary,
-                      style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.outline),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      '更新于 ${formatDateTime(app.updatedAt)} · ${app.downloadCount} 次下载',
-                      style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
-                    ),
-                  ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Text(
+                app.summary,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                  height: 1.45,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                '更新于 ${formatDateTime(app.updatedAt)} · ${app.downloadCount} 次下载',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
           _buildActionCard(detail, release),
           if (detail.description.isNotEmpty) ...[
             const SizedBox(height: 20),
@@ -214,24 +224,29 @@ class _AppDetailPageState extends State<AppDetailPage> {
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
                   itemCount: detail.screenshots.length,
-                  separatorBuilder: (context, index) => const SizedBox(width: 8),
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(width: 8),
                   itemBuilder: (context, index) {
-                    final url = AppConfig.instance.resolve(detail.screenshots[index]).toString();
+                    final url = AppConfig.instance
+                        .resolve(detail.screenshots[index])
+                        .toString();
                     return GestureDetector(
                       onTap: () => _showScreenshot(detail.screenshots, index),
                       child: ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(14),
                         child: Image.network(
                           url,
                           width: 132,
                           height: 240,
                           fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) => Container(
-                            width: 132,
-                            alignment: Alignment.center,
-                            color: theme.colorScheme.surfaceContainerHighest,
-                            child: const Icon(Icons.broken_image_outlined),
-                          ),
+                          errorBuilder: (context, error, stackTrace) =>
+                              Container(
+                                width: 132,
+                                alignment: Alignment.center,
+                                color:
+                                    theme.colorScheme.surfaceContainerHighest,
+                                child: const Icon(Icons.broken_image_outlined),
+                              ),
                         ),
                       ),
                     );
@@ -269,7 +284,9 @@ class _AppDetailPageState extends State<AppDetailPage> {
                           ),
                           Text(
                             formatDateTime(item.publishedAt),
-                            style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.outline,
+                            ),
                           ),
                         ],
                       ),
@@ -290,52 +307,62 @@ class _AppDetailPageState extends State<AppDetailPage> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.6)),
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.45),
+        ),
       ),
       child: detail.app.isAndroid
           ? (release == null
-              ? Text(
-                  '暂无可下载版本，请等待管理员发布安装包。',
-                  style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.outline),
-                )
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '当前版本 v${release.versionName}',
-                      style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+                ? Text(
+                    '暂无可下载版本，请等待管理员发布安装包。',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.outline,
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${formatBytes(release.fileSize)}'
-                      '${release.minSdk != null ? ' · 最低 Android API ${release.minSdk}' : ''}',
-                      style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
-                    ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton.icon(
-                        onPressed: _downloadAndInstall,
-                        icon: const Icon(Icons.download_rounded),
-                        label: const Text('下载并安装'),
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '当前版本 v${release.versionName}',
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      'SHA-256',
-                      style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.outline),
-                    ),
-                    SelectableText(
-                      release.sha256,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        fontFamily: 'monospace',
-                        color: theme.colorScheme.outline,
+                      const SizedBox(height: 4),
+                      Text(
+                        '${formatBytes(release.fileSize)}'
+                        '${release.minSdk != null ? ' · 最低 Android API ${release.minSdk}' : ''}',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.outline,
+                        ),
                       ),
-                    ),
-                  ],
-                ))
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          onPressed: _downloadAndInstall,
+                          icon: const Icon(Icons.download_rounded),
+                          label: const Text('下载并安装'),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        'SHA-256',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: theme.colorScheme.outline,
+                        ),
+                      ),
+                      SelectableText(
+                        release.sha256,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          fontFamily: 'monospace',
+                          color: theme.colorScheme.outline,
+                        ),
+                      ),
+                    ],
+                  ))
           : Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -347,7 +374,9 @@ class _AppDetailPageState extends State<AppDetailPage> {
                 SizedBox(
                   width: double.infinity,
                   child: FilledButton.icon(
-                    onPressed: detail.webUrl == null ? null : () => _openWeb(detail.webUrl!),
+                    onPressed: detail.webUrl == null
+                        ? null
+                        : () => _openWeb(detail.webUrl!),
                     icon: const Icon(Icons.open_in_new_rounded),
                     label: const Text('打开作品'),
                   ),
@@ -371,7 +400,12 @@ class _Section extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+        Text(
+          title,
+          style: theme.textTheme.titleSmall?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         const SizedBox(height: 8),
         child,
       ],
@@ -396,7 +430,11 @@ class _Badge extends StatelessWidget {
       ),
       child: Text(
         text,
-        style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w500),
+        style: TextStyle(
+          fontSize: 11,
+          color: color,
+          fontWeight: FontWeight.w500,
+        ),
       ),
     );
   }

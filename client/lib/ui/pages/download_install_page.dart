@@ -149,7 +149,18 @@ class _DownloadInstallPageState extends State<DownloadInstallPage> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.system_update_rounded, size: 56, color: theme.colorScheme.primary),
+                  Container(
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.system_update_rounded,
+                      size: 34,
+                      color: theme.colorScheme.primary,
+                    ),
+                  ),
                   const SizedBox(height: 16),
                   ..._buildBody(context),
                 ],
@@ -167,7 +178,9 @@ class _DownloadInstallPageState extends State<DownloadInstallPage> {
 
     switch (_phase) {
       case _Phase.downloading:
-        final fraction = _total > 0 ? (_received / _total).clamp(0.0, 1.0) : null;
+        final fraction = _total > 0
+            ? (_received / _total).clamp(0.0, 1.0)
+            : null;
         return [
           Text(
             '正在下载 ${widget.appName}',
@@ -185,11 +198,16 @@ class _DownloadInstallPageState extends State<DownloadInstallPage> {
           const SizedBox(height: 6),
           Text(
             '支持断点续传，下载完成后自动校验 SHA-256',
-            style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.outline,
+            ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 20),
-          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('取消下载')),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('取消下载'),
+          ),
         ];
 
       case _Phase.verified:
@@ -235,7 +253,9 @@ class _DownloadInstallPageState extends State<DownloadInstallPage> {
           const SizedBox(height: 8),
           Text(
             _error ?? '未知错误',
-            style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.error),
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.error,
+            ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 20),

@@ -64,7 +64,10 @@ class _UpdatesPageState extends State<UpdatesPage> {
 
       // 商店自身的更新（自更新）
       if (ownCode > 0) {
-        final ownCheck = await UpdateRepository.instance.check(info.packageName, ownCode);
+        final ownCheck = await UpdateRepository.instance.check(
+          info.packageName,
+          ownCode,
+        );
         if (ownCheck.hasUpdate) {
           items.add(
             UpdateItem(
@@ -81,13 +84,16 @@ class _UpdatesPageState extends State<UpdatesPage> {
       // 已安装的其他应用
       final apps = await AppRepository.instance.listApps(type: 'ANDROID');
       final candidates = apps
-          .where((app) =>
-              app.packageName != null &&
-              app.packageName!.isNotEmpty &&
-              app.packageName != info.packageName)
+          .where(
+            (app) =>
+                app.packageName != null &&
+                app.packageName!.isNotEmpty &&
+                app.packageName != info.packageName,
+          )
           .toList(growable: false);
-      final installed = await InstallService.instance
-          .installedVersionCodes(candidates.map((app) => app.packageName!).toList());
+      final installed = await InstallService.instance.installedVersionCodes(
+        candidates.map((app) => app.packageName!).toList(),
+      );
 
       for (final app in candidates) {
         final installedCode = installed[app.packageName!];
@@ -96,7 +102,10 @@ class _UpdatesPageState extends State<UpdatesPage> {
         final current = app.currentVersion;
         if (current != null && current.versionCode <= installedCode) continue;
 
-        final check = await UpdateRepository.instance.check(app.packageName!, installedCode);
+        final check = await UpdateRepository.instance.check(
+          app.packageName!,
+          installedCode,
+        );
         if (check.hasUpdate) {
           items.add(
             UpdateItem(
@@ -145,10 +154,14 @@ class _UpdatesPageState extends State<UpdatesPage> {
       MaterialPageRoute<bool>(
         builder: (_) => DownloadInstallPage(
           appName: item.appName,
-          fileKey: '${item.packageName}-${latest?.versionCode ?? item.installedVersionCode}',
+          fileKey:
+              '${item.packageName}-${latest?.versionCode ?? item.installedVersionCode}',
           loadRelease: () async {
             // 重新检查以获取最新的签名下载地址
-            final check = await UpdateRepository.instance.check(item.packageName, item.installedVersionCode);
+            final check = await UpdateRepository.instance.check(
+              item.packageName,
+              item.installedVersionCode,
+            );
             final release = check.latest;
             if (release == null) throw const ApiException('该应用暂无可用更新');
             return release;
@@ -169,8 +182,14 @@ class _UpdatesPageState extends State<UpdatesPage> {
         title: const Text('全部更新'),
         content: Text('将依次下载并安装 ${_items.length} 个更新，安装时需要在系统弹窗中确认。'),
         actions: [
-          TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: const Text('取消')),
-          FilledButton(onPressed: () => Navigator.of(dialogContext).pop(true), child: const Text('开始')),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('开始'),
+          ),
         ],
       ),
     );
@@ -206,8 +225,12 @@ class _UpdatesPageState extends State<UpdatesPage> {
 
   /// 按加载与错误状态构建主体。
   Widget _buildBody() {
-    if (_loading && _items.isEmpty) return const LoadingView(message: '正在检测更新…');
-    if (_error != null && _items.isEmpty) return ErrorRetryView(message: _error!, onRetry: _load);
+    if (_loading && _items.isEmpty) {
+      return const LoadingView(message: '正在检测更新…');
+    }
+    if (_error != null && _items.isEmpty) {
+      return ErrorRetryView(message: _error!, onRetry: _load);
+    }
 
     final theme = Theme.of(context);
 
@@ -220,20 +243,24 @@ class _UpdatesPageState extends State<UpdatesPage> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceContainerLow,
-              borderRadius: BorderRadius.circular(16),
+              color: theme.colorScheme.surface,
+              borderRadius: BorderRadius.circular(18),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   '商店版本 v$_selfVersionName（$_selfVersionCode）',
-                  style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   _items.isEmpty ? '已安装应用均为最新版本' : '发现 ${_items.length} 个可更新项',
-                  style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.outline,
+                  ),
                 ),
                 if (_items.isNotEmpty) ...[
                   const SizedBox(height: 12),
@@ -259,7 +286,12 @@ class _UpdatesPageState extends State<UpdatesPage> {
               ),
             )
           else
-            ..._items.map((item) => _UpdateCard(item: item, onUpdate: _busy ? null : () => _updateOne(item))),
+            ..._items.map(
+              (item) => _UpdateCard(
+                item: item,
+                onUpdate: _busy ? null : () => _updateOne(item),
+              ),
+            ),
         ],
       ),
     );
@@ -282,9 +314,11 @@ class _UpdateCard extends StatelessWidget {
       margin: const EdgeInsets.only(top: 12),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.6)),
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.45),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -303,14 +337,18 @@ class _UpdateCard extends StatelessWidget {
                         Flexible(
                           child: Text(
                             item.appName,
-                            style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
                         if (item.isSelf) ...[
                           const SizedBox(width: 6),
                           Text(
                             '商店自身',
-                            style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.primary),
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: theme.colorScheme.primary,
+                            ),
                           ),
                         ],
                       ],
@@ -318,13 +356,17 @@ class _UpdateCard extends StatelessWidget {
                     const SizedBox(height: 3),
                     Text(
                       '已安装 ${item.installedVersionCode} → 最新 v${latest?.versionName ?? ''}（${latest?.versionCode ?? ''}）',
-                      style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.outline,
+                      ),
                     ),
                     if (latest != null) ...[
                       const SizedBox(height: 2),
                       Text(
                         formatBytes(latest.fileSize),
-                        style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.outline,
+                        ),
                       ),
                     ],
                   ],
@@ -346,7 +388,10 @@ class _UpdateCard extends StatelessWidget {
             children: [
               if (item.forceUpdate)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
                     color: theme.colorScheme.errorContainer,
                     borderRadius: BorderRadius.circular(999),

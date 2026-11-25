@@ -187,3 +187,15 @@ HTTP 冒烟实测明细（种子数据：`smoke-pack`，真实 APK 4026 版，�
 3. **真机断点续传**：接口侧 Range 206 已由 api-smoke 覆盖，客户端续传逻辑为代码走查；未在真机人为中断后验证。
 4. **自更新条目**：验收用的「应用商店」条目已删除。若需要客户端自更新，需在后台把自己发布为一个 Android 应用并保持 `packageName=com.appstore.appstore_client`。
 
+
+### UI 重构（Apple 风格，B7）
+
+| 项目 | 结果 | 证据 |
+|---|---|---|
+| 品牌与配色 | 通过 | 新 LOGO 落盘 `public/logo.svg`、`src/app/icon.svg`；Web 设计令牌 `--color-brand: #1E51EE`，并把历史 indigo 色阶统一映射到品牌蓝；Flutter 主题显式覆盖 `primary` 为 `#1E51EE` |
+| Web 前台 | 通过 | 毛玻璃导航、居中 Hero、iOS 分段筛选与圆角卡片；浏览器验证首页、详情页均无控制台错误，见 [web-home-apple.jpg](file:///c:/Code/AppStore/docs/AppStore/evidence/web-home-apple.jpg)、[web-app-detail-apple.jpg](file:///c:/Code/AppStore/docs/AppStore/evidence/web-app-detail-apple.jpg) |
+| Web 后台 | 通过 | 登录卡片垂直居中并展示 LOGO，后台外壳统一玻璃导航与品牌色；浏览器验证通过，见 [web-admin-login-apple.jpg](file:///c:/Code/AppStore/docs/AppStore/evidence/web-admin-login-apple.jpg) |
+| Flutter 客户端 | 通过 | 首页 AppBar 展示 LOGO，详情页头部居中，底部导航与按钮统一品牌蓝；真机截图 [client-home-apple.png](file:///c:/Code/AppStore/docs/AppStore/evidence/client-home-apple.png)、[client-detail-apple.png](file:///c:/Code/AppStore/docs/AppStore/evidence/client-detail-apple.png) |
+| 垂直居中 | 通过 | Web 统一使用 `.page-center`：内容较少时垂直居中、内容较多时自然撑开；Flutter 加载/错误/空态保持居中 |
+| 应用图标 | 通过 | 由新 LOGO 生成各密度 Android 启动图标（mdpi–xxxhdpi），随 release APK 安装生效 |
+| 构建与测试 | 通过 | `npm run typecheck` / `lint` / `build` 通过；`flutter analyze` 0 issue；`flutter test` 5/5；`flutter build apk --release` 成功 |

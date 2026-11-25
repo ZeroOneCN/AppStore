@@ -75,7 +75,7 @@ async function AdminAppContent({ params }: { params: RouteParams }) {
       <div>
         <Link
           href="/admin/apps"
-          className="inline-flex items-center gap-1 text-sm text-neutral-500 transition hover:text-indigo-600 dark:text-neutral-400 dark:hover:text-indigo-400"
+          className="inline-flex items-center gap-1 text-sm text-neutral-500 transition hover:text-brand dark:text-neutral-400"
         >
           ← 返回应用列表
         </Link>
@@ -85,7 +85,7 @@ async function AdminAppContent({ params }: { params: RouteParams }) {
             <AppIcon name={app.name} iconUrl={app.iconUrl} size={56} />
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <h1 className="truncate text-xl font-semibold">{app.name}</h1>
+                <h1 className="truncate text-2xl font-semibold tracking-tight">{app.name}</h1>
                 {app.pinned ? (
                   <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
                     置顶

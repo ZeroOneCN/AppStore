@@ -1,19 +1,16 @@
 /** 后台表单共用样式 */
 
-/** 输入框样式 */
-export const inputClass =
-  "w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3.5 py-2.5 text-sm outline-none transition placeholder:text-neutral-400 focus:border-indigo-400 focus:bg-white focus:ring-2 focus:ring-indigo-100 dark:border-neutral-700 dark:bg-neutral-950 dark:focus:border-indigo-500 dark:focus:bg-neutral-900 dark:focus:ring-indigo-500/20";
+/** 输入框样式（复用全局 Apple 风格令牌） */
+export const inputClass = "input-apple";
 
 /** 字段标签样式 */
 export const labelClass = "mb-1.5 flex items-center gap-1.5 text-sm font-medium";
 
 /** 主按钮样式 */
-export const primaryButtonClass =
-  "inline-flex items-center justify-center rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60";
+export const primaryButtonClass = "btn-primary";
 
 /** 次要按钮样式 */
-export const secondaryButtonClass =
-  "inline-flex items-center justify-center rounded-xl border border-neutral-200 px-3 py-2 text-sm transition hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-neutral-700 dark:hover:bg-neutral-800";
+export const secondaryButtonClass = "btn-secondary";
 
 /**
  * 从标准错误响应中提取可读信息，附带字段级校验详情。

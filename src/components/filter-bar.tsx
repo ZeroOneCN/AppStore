@@ -90,7 +90,7 @@ export function FilterBar({ categories, tags }: { categories: string[]; tags: st
     Boolean(currentQuery) || Boolean(activeType) || Boolean(activeCategory) || Boolean(activeTag);
 
   return (
-    <div className="rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+    <div className="card-apple p-3.5 sm:p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <label className="relative flex-1">
           <span className="sr-only">搜索应用</span>
@@ -99,24 +99,24 @@ export function FilterBar({ categories, tags }: { categories: string[]; tags: st
             value={query}
             onChange={(event) => handleQueryChange(event.target.value)}
             placeholder="搜索应用名称或简介"
-            className="w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3.5 py-2 pr-9 text-sm outline-none transition placeholder:text-neutral-400 focus:border-indigo-400 focus:bg-white focus:ring-2 focus:ring-indigo-100 dark:border-neutral-700 dark:bg-neutral-950 dark:focus:border-indigo-500 dark:focus:bg-neutral-900 dark:focus:ring-indigo-500/20"
+            className="w-full rounded-xl border border-transparent bg-black/[0.04] px-3.5 py-2.5 pr-9 text-sm text-neutral-900 outline-none transition placeholder:text-neutral-400 focus:border-brand/40 focus:bg-white focus:ring-4 focus:ring-brand/10 dark:bg-white/[0.06] dark:text-neutral-100 dark:focus:border-brand/50 dark:focus:bg-[#1c1c1e]"
           />
           {isPending ? (
-            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-indigo-500">…</span>
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-brand">…</span>
           ) : null}
         </label>
 
         <div className="flex items-center gap-2">
-          <div className="inline-flex rounded-xl border border-neutral-200 p-0.5 dark:border-neutral-700">
+          <div className="inline-flex rounded-xl bg-black/[0.05] p-0.5 dark:bg-white/[0.08]">
             {TYPE_OPTIONS.map((option) => (
               <button
                 key={option.label}
                 type="button"
                 onClick={() => applyPatch({ type: option.value })}
-                className={`rounded-lg px-2.5 py-1.5 text-xs font-medium transition ${
+                className={`rounded-[10px] px-3 py-1.5 text-xs font-medium transition ${
                   activeType === option.value
-                    ? "bg-indigo-600 text-white"
-                    : "text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
+                    ? "bg-white text-neutral-900 shadow-sm dark:bg-white/15 dark:text-white"
+                    : "text-neutral-600 hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-white"
                 }`}
               >
                 {option.label}
@@ -131,7 +131,7 @@ export function FilterBar({ categories, tags }: { categories: string[]; tags: st
             id="sort-select"
             value={activeSort}
             onChange={(event) => applyPatch({ sort: event.target.value === "recent" ? "" : event.target.value })}
-            className="rounded-xl border border-neutral-200 bg-neutral-50 px-2.5 py-2 text-xs outline-none transition focus:border-indigo-400 dark:border-neutral-700 dark:bg-neutral-950"
+            className="rounded-xl border border-black/[0.06] bg-white/70 px-2.5 py-2 text-xs text-neutral-700 outline-none transition hover:bg-white focus:border-brand/40 focus:ring-4 focus:ring-brand/10 dark:border-white/10 dark:bg-white/5 dark:text-neutral-200"
           >
             {SORT_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
@@ -184,7 +184,7 @@ export function FilterBar({ categories, tags }: { categories: string[]; tags: st
               setQuery("");
               applyPatch({ q: "", type: "", category: "", tag: "", sort: "" });
             }}
-            className="text-xs text-neutral-500 underline-offset-2 transition hover:text-indigo-600 hover:underline dark:text-neutral-400 dark:hover:text-indigo-400"
+            className="text-xs font-medium text-brand transition hover:text-brand-deep"
           >
             清空筛选
           </button>
@@ -214,10 +214,10 @@ function Chip({
     <button
       type="button"
       onClick={onClick}
-      className={`whitespace-nowrap rounded-full px-2.5 py-1 text-xs transition ${
+      className={`whitespace-nowrap rounded-full px-2.5 py-1 text-xs transition duration-200 ${
         active
-          ? "bg-indigo-600 text-white"
-          : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700"
+          ? "bg-brand text-white shadow-[0_6px_16px_-10px_rgba(30,81,238,0.9)]"
+          : "bg-black/[0.04] text-neutral-600 hover:bg-black/[0.07] dark:bg-white/[0.07] dark:text-neutral-300 dark:hover:bg-white/[0.12]"
       }`}
     >
       {children}

@@ -40,7 +40,10 @@ class _HomeShellState extends State<HomeShell> {
       final ownCode = int.tryParse(info.buildNumber.split('.').first) ?? 0;
       if (ownCode <= 0) return;
 
-      final check = await UpdateRepository.instance.check(info.packageName, ownCode);
+      final check = await UpdateRepository.instance.check(
+        info.packageName,
+        ownCode,
+      );
       if (!check.hasUpdate || check.latest == null || !mounted) return;
 
       await _showSelfUpdateDialog(check, ownCode, info.packageName);
@@ -107,7 +110,10 @@ class _HomeShellState extends State<HomeShell> {
           fileKey: '$packageName-${latest.versionCode}',
           loadRelease: () async {
             // 重新检查以获取最新的签名下载地址
-            final fresh = await UpdateRepository.instance.check(packageName, ownCode);
+            final fresh = await UpdateRepository.instance.check(
+              packageName,
+              ownCode,
+            );
             return fresh.latest ?? latest;
           },
         ),
@@ -120,32 +126,38 @@ class _HomeShellState extends State<HomeShell> {
     return Scaffold(
       body: IndexedStack(
         index: _index,
-        children: const [
-          HomePage(),
-          UpdatesPage(),
-          SettingsPage(),
-        ],
+        children: const [HomePage(), UpdatesPage(), SettingsPage()],
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: (index) => setState(() => _index = index),
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.apps_rounded),
-            selectedIcon: Icon(Icons.apps_rounded),
-            label: '应用',
+      bottomNavigationBar: DecoratedBox(
+        decoration: BoxDecoration(
+          border: Border(
+            top: BorderSide(
+              color: Theme.of(context).colorScheme.outlineVariant
+                  .withValues(alpha: 0.45),
+            ),
           ),
-          NavigationDestination(
-            icon: Icon(Icons.system_update_alt_outlined),
-            selectedIcon: Icon(Icons.system_update_alt_rounded),
-            label: '更新',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.settings_outlined),
-            selectedIcon: Icon(Icons.settings_rounded),
-            label: '设置',
-          ),
-        ],
+        ),
+        child: NavigationBar(
+          selectedIndex: _index,
+          onDestinationSelected: (index) => setState(() => _index = index),
+          destinations: const [
+            NavigationDestination(
+              icon: Icon(Icons.apps_rounded),
+              selectedIcon: Icon(Icons.apps_rounded),
+              label: '应用',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.system_update_alt_outlined),
+              selectedIcon: Icon(Icons.system_update_alt_rounded),
+              label: '更新',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.settings_outlined),
+              selectedIcon: Icon(Icons.settings_rounded),
+              label: '设置',
+            ),
+          ],
+        ),
       ),
     );
   }
