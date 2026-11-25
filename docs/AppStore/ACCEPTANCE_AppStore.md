@@ -23,13 +23,58 @@
 
 **单测汇总**：5 个文件 / 24 个用例，全部通过（5.56s）。
 
-### 待补测（B1 遗留）
+### 待补测项补测结果（2026-11-25 完成）
 
-| 项 | 原因 | 计划 |
+用真实安装包 `C:\Code\PackKeeper\dist\包裹管家-1.0.0-4026.apk`（104,936,069 字节）补测，通过 `scripts/verify-apk.ts` 与 `apksigner verify --print-certs` 交叉验证：
+
+| 验收项 | 实测值 | 结果 |
 |---|---|---|
-| 真实 APK 的包名、versionCode、图标、签名指纹解析 | 当前环境无 APK 样例，不以伪造文件代替 | B5 产出商店 APK 后回灌验证，或用户提供任一 APK |
-| `app-info-parser` 在真实 APK 上的字段形态（icon 为 data URI / base64） | 同上 | 同上 |
+| 包名解析 | `com.packkeeper.packkeeper` | 通过 |
+| versionCode / versionName | `4026` / `1.0.0` | 通过 |
+| minSdk | `24`（取自 `usesSdk.minSdkVersion`） | 通过 |
+| 图标解析 | 顶层 `icon` data URI，解码后 1210 字节 | 通过 |
+| 签名证书 SHA-256 指纹 | `5A:93:64:8A:A0:EF:C4:83:D5:86:ED:0F:D8:17:9A:D2:FE:3C:5E:90:E1:33:97:DE:94:24:CD:E4:27:30:AF:06` | 通过（与 apksigner `5a93648aa0efc483d586ed0fd8179ad2fe3c5e90e13397de9424cde42730af06` 完全一致） |
+| 无 v1 签名时的回退 | 该包 363 个 zip 条目无 `META-INF/*.RSA`，回退解析 APK Signature Scheme v2 签名块取证书 | 通过 |
+| 文件 SHA256（全量 vs 流式） | 两种算法结果一致（`13909d5a…0123`） | 通过 |
 
-## B2–B6
+第二个包 `AiJianShen-1.9.5.apk` 交叉验证同样通过：包名 `com.aijianshen.app`、versionCode `16`、versionName `1.9.5`、minSdk `26`、图标 548 字节。
+
+> 备注：`apksigner.bat` 经管道调用时 shell 退出码为 -1，但输出完整且指纹与本地解析一致，不影响结论。
+
+## B2（T07–T12）
+
+| 任务 | 验收项 | 结果 | 证据 |
+|---|---|---|---|
+| T07 签名 | 票据含 `exp`+64 位 hex 签名；过期/篡改分别 410/403 | 通过 | `signing.service.test.ts` 5 例全绿 |
+| T08 应用服务 | 列表过滤/排序/置顶、详情聚合、创建校验、删除级联 | 通过 | `app.service.test.ts` 9 例全绿（真实 SQLite） |
+| T09 版本服务 | 包名不一致、版本号重复、发布切换当前版本、回滚、归档、更新判定 | 通过 | `release.service.test.ts` 9 例全绿 |
+| T10 公开 API | 列表 / 详情 / 版本列表 / 下载票据 4 个接口 | 通过 | 冒烟 18 项断言全过 |
+| T11 下载与资源 | 签名校验、Range 206、越界 416、资源仅公开应用可读 | 通过 | 冒烟实测，见下 |
+| T12 更新检查 | 低版本有更新、同版本无更新、未知包名 200 + `NOT_FOUND` | 通过 | 冒烟实测 |
+| 整体 | `npm run typecheck` 0 error | 通过 | 退出码 0 |
+| 整体 | `npm run lint` 0 error / 0 warning | 通过 | 无输出 |
+| 整体 | `npm run build` 成功且无预渲染异常日志 | 通过 | 7 个 API 路由均为 ƒ 动态；为 `/api/public/apps`、`/api/update/check` 增加 `connection()` 消除构建期预渲染报错 |
+| 整体 | 单元/集成测试全绿 | 通过 | 8 个文件 / 47 个用例（13s） |
+| 整体 | HTTP 端到端冒烟 | 通过 | `node scripts/api-smoke.mjs`，18/18 PASS |
+
+HTTP 冒烟实测明细（种子数据：`smoke-pack`，真实 APK 4026 版，跑完后已清理）：
+
+| 断言 | 结果 |
+|---|---|
+| 列表返回至少 1 个应用、含 slug | PASS |
+| 详情含当前版本与包名 | PASS |
+| `versionCode=0` 检出更新，`downloadUrl` 含 64 位签名 | PASS |
+| 同版本无更新 | PASS |
+| 未知包名 200 且 `reason=NOT_FOUND` | PASS |
+| 下载票据含 64 位签名 | PASS |
+| `Range: bytes=0-1023` → 206，响应体 1024 字节，`Content-Range: bytes 0-1023/104936069`，`Accept-Ranges: bytes` | PASS |
+| `Range: bytes=1024-2047` → 206，响应体 1024 字节 | PASS |
+| 篡改签名 → 403 | PASS |
+| 越界 Range → 416 | PASS |
+| 下载计数口径 | 通过：3 次 `start=0` 请求后 app/release 计数均为 3，第二段 Range 不计数 |
+
+> 说明：Next 对流式响应使用 `chunked` 编码，不保留 `Content-Length`，因此断言改为校验实际响应体字节数与 `Content-Range`。
+
+## B3–B6
 
 尚未开始。

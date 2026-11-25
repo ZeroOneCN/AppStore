@@ -38,7 +38,7 @@
 | 需求对齐（Align） | 已完成 | docs/AppStore/ALIGNMENT_AppStore.md、CONSENSUS_AppStore.md |
 | 架构设计（Architect） | 已完成 | docs/AppStore/DESIGN_AppStore.md |
 | 任务拆分（Atomize） | 已完成 | docs/AppStore/TASK_AppStore.md |
-| 开发实施（Automate） | 进行中：B1 完成 | 代码与 ACCEPTANCE_AppStore.md |
+| 开发实施（Automate） | 进行中：B2 完成 | 代码与 ACCEPTANCE_AppStore.md |
 | 验收总结（Assess） | 未开始 | FINAL_AppStore.md、TODO_AppStore.md |
 
 ### 批次进度
@@ -46,7 +46,7 @@
 | 批次 | 内容 | 状态 |
 |---|---|---|
 | B1 | T01–T06 骨架、数据模型、基础设施、鉴权、存储、APK 解析 | 已完成 |
-| B2 | T07–T12 应用/版本服务、公开 API、下载、更新检查 | 未开始 |
+| B2 | T07–T12 应用/版本服务、公开 API、下载、更新检查 | 已完成 |
 | B3 | T13 管理 API | 未开始 |
 | B4 | T14–T15 前台与后台界面 | 未开始 |
 | B5 | T16 Flutter 客户端 | 未开始 |

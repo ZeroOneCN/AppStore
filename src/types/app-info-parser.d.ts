@@ -1,14 +1,22 @@
 declare module "app-info-parser" {
-  /** 解析结果中与 APK 相关的字段（仅声明本工程用到的部分） */
+  /** APK 解析结果中本工程用到的字段 */
   export interface ApkInfo {
     package?: string;
     packageName?: string;
     versionCode?: string | number;
     versionName?: string;
+    /** 顶层图标：通常是 data:image/png;base64,... */
+    icon?: string | Buffer | Uint8Array;
+    /** 清单中的 uses-sdk 信息 */
+    usesSdk?: {
+      minSdkVersion?: string | number;
+      targetSdkVersion?: string | number;
+    };
     minSdkVersion?: string | number;
     application?: {
       label?: string;
-      icon?: string | Buffer | Uint8Array;
+      /** 新版解析器返回资源路径数组，旧版可能返回 base64 图标 */
+      icon?: string | string[] | Buffer | Uint8Array;
     };
     [key: string]: unknown;
   }

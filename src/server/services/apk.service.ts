@@ -84,7 +84,8 @@ export async function streamApkToTemp(
 }
 
 /**
- * 将 base64 data URI 或裸 base64 解码为 Buffer。
+ * 将 base64 data URI、裸 base64 或资源路径数组解码为 Buffer。
+ * 新版解析器的 application.icon 是资源路径数组，无法在此直接解码，返回 null 交由上层处理。
  * @param value 解析器返回的图标字段
  * @returns 二进制；无法识别时返回 null
  */
@@ -92,7 +93,9 @@ function decodeIcon(value: unknown): Buffer | null {
   if (!value) return null;
   if (Buffer.isBuffer(value)) return value;
   if (value instanceof Uint8Array) return Buffer.from(value);
+  if (Array.isArray(value)) return null;
   if (typeof value !== "string") return null;
+  if (!value.startsWith("data:") && !/^[A-Za-z0-9+/=\s]+$/.test(value)) return null;
 
   const base64 = value.includes(",") ? value.slice(value.indexOf(",") + 1) : value;
   try {
@@ -125,11 +128,11 @@ function fingerprintFromPkcs7(pkcs7Buffer: Buffer): string | null {
 }
 
 /**
- * 从 APK 的 META-INF 目录中提取签名证书指纹，按流式读取，避免整体载入大文件。
+ * 从 APK 的 META-INF 目录中提取 v1 签名证书指纹，按流式读取，避免整体载入大文件。
  * @param filePath APK 绝对路径
  * @returns 指纹字符串或 null
  */
-export async function extractSignFingerprint(filePath: string): Promise<string | null> {
+async function extractV1Fingerprint(filePath: string): Promise<string | null> {
   return new Promise<string | null>((resolve) => {
     yauzl.open(filePath, { lazyEntries: true }, (openError, zipFile) => {
       if (openError || !zipFile) {
@@ -174,6 +177,134 @@ export async function extractSignFingerprint(filePath: string): Promise<string |
   });
 }
 
+/** APK 签名块魔数 */
+const APK_SIG_BLOCK_MAGIC = Buffer.from("APK Sig Block 42");
+/** v2 签名块 ID */
+const SIG_BLOCK_ID_V2 = 0x7109871a;
+/** v3 签名块 ID */
+const SIG_BLOCK_ID_V3 = 0xf05368c0;
+
+/**
+ * 从 ZIP 结尾目录中定位中央目录偏移。
+ * @param handle 已打开的文件句柄
+ * @param fileSize 文件总大小
+ * @returns 中央目录偏移与长度；未找到返回 null
+ */
+async function findCentralDirectory(
+  handle: fs.FileHandle,
+  fileSize: number,
+): Promise<{ cdOffset: number } | null> {
+  const tailSize = Math.min(fileSize, 66 * 1024);
+  const tail = Buffer.alloc(tailSize);
+  await handle.read(tail, 0, tailSize, fileSize - tailSize);
+
+  for (let i = tailSize - 22; i >= 0; i -= 1) {
+    if (tail.readUInt32LE(i) === 0x06054b50) {
+      return { cdOffset: tail.readUInt32LE(i + 16) };
+    }
+  }
+  return null;
+}
+
+/**
+ * 从 v2/v3 签名块的签名者结构中取出第一份证书，计算 SHA-256 指纹。
+ * 仅做结构解析，不校验签名链。
+ * @param value 签名块 value 区域
+ * @returns 指纹或 null
+ */
+function fingerprintFromSignerBlock(value: Buffer): string | null {
+  try {
+    let offset = 0;
+    const signersLength = value.readUInt32LE(offset);
+    offset += 4;
+    if (offset + signersLength > value.length) return null;
+
+    // 第一个 signer：signer 长度 → signed data 长度 → digests → certificates
+    offset += 4;
+    const signedDataLength = value.readUInt32LE(offset);
+    offset += 4;
+    if (offset + signedDataLength > value.length) return null;
+
+    const digestsLength = value.readUInt32LE(offset);
+    offset += 4 + digestsLength;
+    const certificatesLength = value.readUInt32LE(offset);
+    offset += 4;
+    if (offset + certificatesLength > value.length) return null;
+
+    const certificateLength = value.readUInt32LE(offset);
+    offset += 4;
+    if (certificateLength === 0 || offset + certificateLength > value.length) return null;
+
+    const der = value.subarray(offset, offset + certificateLength);
+    const digest = createHash("sha256").update(der).digest("hex");
+    return (digest.match(/.{2}/g) ?? []).join(":").toUpperCase();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 解析 APK Signature Scheme v2 / v3 签名块，提取证书指纹。
+ * 现代 APK 多数只带 v2/v3 签名，没有 META-INF 下的 v1 文件。
+ * @param filePath APK 绝对路径
+ * @returns 指纹或 null
+ */
+async function extractV2V3Fingerprint(filePath: string): Promise<string | null> {
+  let handle: fs.FileHandle | null = null;
+  try {
+    handle = await fs.open(filePath, "r");
+    const { size } = await handle.stat();
+    if (size < 32) return null;
+
+    const eocd = await findCentralDirectory(handle, size);
+    if (!eocd || eocd.cdOffset < 32) return null;
+
+    const footer = Buffer.alloc(24);
+    await handle.read(footer, 0, 24, eocd.cdOffset - 24);
+    if (!footer.subarray(8).equals(APK_SIG_BLOCK_MAGIC)) return null;
+
+    const blockSize = Number(footer.readBigUInt64LE(0));
+    if (!Number.isSafeInteger(blockSize) || blockSize <= 24) return null;
+
+    const blockStart = eocd.cdOffset - blockSize - 8;
+    const pairsLength = eocd.cdOffset - 24 - (blockStart + 8);
+    if (blockStart < 0 || pairsLength <= 0) return null;
+
+    const block = Buffer.alloc(pairsLength);
+    await handle.read(block, 0, pairsLength, blockStart + 8);
+
+    let offset = 0;
+    while (offset + 12 <= block.length) {
+      const pairLength = Number(block.readBigUInt64LE(offset));
+      if (pairLength < 4 || offset + 8 + pairLength > block.length) break;
+
+      const id = block.readUInt32LE(offset + 8);
+      if (id === SIG_BLOCK_ID_V2 || id === SIG_BLOCK_ID_V3) {
+        const value = block.subarray(offset + 12, offset + 8 + pairLength);
+        const fingerprint = fingerprintFromSignerBlock(value);
+        if (fingerprint) return fingerprint;
+      }
+
+      offset += 8 + pairLength;
+    }
+
+    return null;
+  } catch {
+    return null;
+  } finally {
+    await handle?.close();
+  }
+}
+
+/**
+ * 提取 APK 签名证书指纹：优先 v1（META-INF），缺失时回退到 v2/v3 签名块。
+ * @param filePath APK 绝对路径
+ * @returns 指纹或 null
+ */
+export async function extractSignFingerprint(filePath: string): Promise<string | null> {
+  return (await extractV1Fingerprint(filePath)) ?? (await extractV2V3Fingerprint(filePath));
+}
+
 /**
  * 解析 APK 元信息：包名、版本、最低系统版本、图标、签名指纹。
  * @param filePath APK 绝对路径
@@ -200,14 +331,17 @@ export async function parseApk(filePath: string): Promise<ParsedApk> {
     throw new AppError("APK_PARSE_FAILED", "APK 缺少包名、版本名或版本号，无法发布");
   }
 
-  const minSdkValue = Number.parseInt(String(info.minSdkVersion ?? ""), 10);
+  const minSdkValue = Number.parseInt(
+    String(info.usesSdk?.minSdkVersion ?? info.minSdkVersion ?? ""),
+    10,
+  );
 
   return {
     packageName,
     versionCode,
     versionName,
     minSdk: Number.isFinite(minSdkValue) ? minSdkValue : null,
-    iconBuffer: decodeIcon(info.application?.icon),
+    iconBuffer: decodeIcon(info.icon) ?? decodeIcon(info.application?.icon),
     signFingerprint: await extractSignFingerprint(filePath),
   };
 }
