@@ -1,0 +1,75 @@
+// 个人应用商店数据模型
+// 说明：SQLite 不支持原生枚举，type / visibility / status 以字符串存储，
+//       取值范围由 src/server/infra/constants.ts 统一约束。
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+/// 管理员账号，仅允许单账号使用
+model AdminUser {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+}
+
+/// 应用档案：Android 应用或网页作品
+model App {
+  id            String    @id @default(cuid())
+  slug          String    @unique
+  name          String
+  summary       String
+  description   String    @default("")
+  /// ANDROID | WEB
+  type          String
+  category      String
+  /// JSON 字符串数组
+  tags          String    @default("[]")
+  iconPath      String?
+  /// JSON 路径数组
+  screenshots   String    @default("[]")
+  webUrl        String?
+  packageName   String?   @unique
+  /// PUBLIC | PRIVATE
+  visibility    String    @default("PUBLIC")
+  pinned        Boolean   @default(false)
+  downloadCount Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  releases      Release[]
+
+  @@index([type, visibility])
+  @@index([category])
+}
+
+/// Android 应用版本，一个应用同一时刻至多一条 isCurrent
+model Release {
+  id                     String    @id @default(cuid())
+  appId                  String
+  app                    App       @relation(fields: [appId], references: [id], onDelete: Cascade)
+  versionName            String
+  versionCode            Int
+  changelog              String    @default("")
+  filePath               String
+  fileSize               Int
+  sha256                 String
+  signFingerprint        String?
+  minSdk                 Int?
+  forceUpdate            Boolean   @default(false)
+  minSupportedVersionCode Int?
+  /// DRAFT | PUBLISHED | ARCHIVED
+  status                 String    @default("DRAFT")
+  isCurrent              Boolean   @default(false)
+  downloadCount          Int       @default(0)
+  publishedAt            DateTime?
+  createdAt              DateTime  @default(now())
+
+  @@unique([appId, versionCode])
+  @@index([appId, status, isCurrent])
+}
