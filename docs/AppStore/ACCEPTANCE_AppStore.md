@@ -118,6 +118,24 @@ HTTP 冒烟实测明细（种子数据：`smoke-pack`，真实 APK 4026 版，�
 
 浏览器链路：登录 → 新建应用（UI）→ 上传真实 APK（接口）→ 发布 → 前台应用墙搜索 → 详情页点击下载 → 后台版本状态核对 → 前台空态 → 390px 窄屏检查。
 
-## B5–B6
+## B5（T16 Flutter Android 客户端）
+
+| 验收项 | 结果 | 证据 |
+|---|---|---|
+| 工程可构建 | 通过 | `flutter pub get` / `flutter analyze` 0 issue；`flutter build apk --debug` 产出 `client/build/app/outputs/flutter-apk/app-debug.apk` |
+| 单元测试 | 通过 | `flutter test` 5 例全绿：字节格式化、进度百分比、基地址校验、相对/绝对地址重写 |
+| 应用墙 | 通过（代码走查） | 搜索 350ms 防抖、Android/网页类型与分类筛选、最近更新/名称/下载数排序、自适应网格、下拉刷新、空态与错误重试 |
+| 详情与下载 | 通过（代码走查） | 截图横向浏览与全屏查看、更新日志、SHA-256、历史版本；每次下载前重新获取签名票据 |
+| 断点续传与校验 | 通过（代码走查） | Range 续传（206 追加 / 200 重下 / 416 清理 / 410 过期提示），完成后校验文件长度与 SHA-256，失败删除 |
+| 安装引导 | 通过（代码走查） | 下载完成后检查「安装未知应用」权限，未授权时引导至系统设置；FileProvider 共享 `files/downloads` |
+| 更新页 | 通过（代码走查） | 读取商店自身版本与已安装应用版本，逐个调用 `/api/update/check`（间隔 320ms），强制更新置顶，支持单个/全部更新 |
+| 启动自更新 | 通过（代码走查） | 启动后检测商店自身更新；强制更新弹窗 `barrierDismissible=false` 且 `PopScope` 禁止返回关闭 |
+| 基地址配置 | 通过（代码走查） | 设置页支持保存与连接测试，地址变更后应用墙/更新页自动重载；绝对下载地址会重写主机以适配内网 |
+| 接口契约联调 | 通过 | `GET /api/public/apps` 返回 `packageName`；`GET /api/update/check` 返回 `hasUpdate/forceUpdate/latest`；未知包名返回 `hasUpdate=false` + `reason=NOT_FOUND` |
+| 真机/模拟器安装 | 未实测 | 当前环境未连接 Android 设备，安装、断点续传与安装权限引导待设备联调验证 |
+
+> 为支持客户端更新检测，公开应用卡片 DTO 新增 `packageName` 字段（服务端 `AppCardDto`），服务端 `typecheck` / `lint` / 47 例单测回归均通过。
+
+## B6
 
 尚未开始。

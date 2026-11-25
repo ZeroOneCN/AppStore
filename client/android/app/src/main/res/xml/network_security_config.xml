@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  网络安全配置：本商店面向个人内网自建部署，默认服务端为 HTTP。
+  如改用 HTTPS，可将 base-config 的 cleartextTrafficPermitted 改为 false，
+  并仅在 domain-config 中保留调试用的模拟器地址。
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system"/>
+            <certificates src="user"/>
+        </trust-anchors>
+    </base-config>
+</network-security-config>

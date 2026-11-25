@@ -25,6 +25,7 @@ export interface AppCardDto {
   category: string;
   tags: string[];
   iconUrl: string | null;
+  packageName: string | null;
   visibility: Visibility;
   pinned: boolean;
   downloadCount: number;
@@ -156,6 +157,7 @@ function toCard(app: App & { releases: Release[] }): AppCardDto {
     category: app.category,
     tags: parseJsonArray(app.tags),
     iconUrl: assetUrl(app.iconPath),
+    packageName: app.packageName,
     visibility: app.visibility as Visibility,
     pinned: app.pinned,
     downloadCount: app.downloadCount,

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 与 DownloadService 的保存目录保持一致：应用私有 files/downloads -->
+<paths>
+    <files-path name="downloads" path="downloads/"/>
+</paths>
