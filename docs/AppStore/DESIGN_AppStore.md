@@ -185,11 +185,14 @@ model Release {
 { "total": 12, "items": [{
   "id": "ckx", "slug": "my-notes", "name": "记事本", "summary": "轻量本地笔记",
   "type": "ANDROID", "category": "工具", "tags": ["笔记","离线"],
-  "iconUrl": "/api/assets/icons/ckx.png", "pinned": true,
+  "iconUrl": "/api/assets/icons/ckx.png", "packageName": "com.example.notes",
+  "pinned": true,
   "downloadCount": 128, "updatedAt": "2026-11-20T08:00:00.000Z",
   "currentVersion": { "versionName": "1.2.0", "versionCode": 12, "publishedAt": "2026-11-20T08:00:00.000Z" }
 }]}
 ```
+
+> `packageName` 供客户端批量更新检测使用，`WEB` 作品为 `null`。
 
 **GET `/api/public/apps/{slug}`** — 返回列表项全部字段 + `description`、`screenshots[]`、`webUrl`、`currentRelease`（含 `changelog`、`fileSize`、`sha256`、`downloadUrl`（10 分钟签名链接）、`forceUpdate`、`minSupportedVersionCode`）、`releases[]`（最近 20 条已发布版本的版本名/版本号/时间）。
 

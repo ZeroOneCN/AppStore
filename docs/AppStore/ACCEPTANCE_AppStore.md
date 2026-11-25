@@ -122,7 +122,7 @@ HTTP 冒烟实测明细（种子数据：`smoke-pack`，真实 APK 4026 版，�
 
 | 验收项 | 结果 | 证据 |
 |---|---|---|
-| 工程可构建 | 通过 | `flutter pub get` / `flutter analyze` 0 issue；`flutter build apk --debug` 产出 `client/build/app/outputs/flutter-apk/app-debug.apk` |
+| 工程可构建 | 通过 | `flutter analyze` 0 issue；`flutter build apk --debug` 与 `flutter build apk --release` 均成功（release 51.6 MB） |
 | 单元测试 | 通过 | `flutter test` 5 例全绿：字节格式化、进度百分比、基地址校验、相对/绝对地址重写 |
 | 应用墙 | 通过（代码走查） | 搜索 350ms 防抖、Android/网页类型与分类筛选、最近更新/名称/下载数排序、自适应网格、下拉刷新、空态与错误重试 |
 | 详情与下载 | 通过（代码走查） | 截图横向浏览与全屏查看、更新日志、SHA-256、历史版本；每次下载前重新获取签名票据 |
@@ -132,10 +132,58 @@ HTTP 冒烟实测明细（种子数据：`smoke-pack`，真实 APK 4026 版，�
 | 启动自更新 | 通过（代码走查） | 启动后检测商店自身更新；强制更新弹窗 `barrierDismissible=false` 且 `PopScope` 禁止返回关闭 |
 | 基地址配置 | 通过（代码走查） | 设置页支持保存与连接测试，地址变更后应用墙/更新页自动重载；绝对下载地址会重写主机以适配内网 |
 | 接口契约联调 | 通过 | `GET /api/public/apps` 返回 `packageName`；`GET /api/update/check` 返回 `hasUpdate/forceUpdate/latest`；未知包名返回 `hasUpdate=false` + `reason=NOT_FOUND` |
-| 真机/模拟器安装 | 未实测 | 当前环境未连接 Android 设备，安装、断点续传与安装权限引导待设备联调验证 |
+| 真机浏览与安装 | 通过 | ADB 连接 Xiaomi 23127PN0CC 实测：首页显示包裹管家，详情页正常；点击「下载并安装」下载 100 MB 后调起 MIUI 安装器，安装完成后 `lastUpdateTime` 更新，证明下载、校验与安装链路可用 |
+| 真机更新检测 | 通过 | 更新页读取商店自身 v1.0.0(1) 与已安装应用 4026；临时将库中版本号改为 4027 后刷新，正确显示「已安装 4026 → 最新 v1.0.0（4027）」并可单条更新；随后已还原为 4026 |
+| 真机自更新 | 部分通过 | 上传 v1.0.1(2) 后启动客户端，弹出「发现商店新版本」对话框；点击更新完成下载并调起 MIUI 安装器，因 MIUI 对新 APK 的云端扫描耗时超出验收时间未完成最终安装 |
+| 字体与窄屏 | 通过 | 1.3 倍系统字体与 360dp 窄屏（1080×2400）下首页无溢出、无横向滚动；截图见 `docs/AppStore/evidence/` |
 
 > 为支持客户端更新检测，公开应用卡片 DTO 新增 `packageName` 字段（服务端 `AppCardDto`），服务端 `typecheck` / `lint` / 47 例单测回归均通过。
 
-## B6
+## B6（T17–T18 接入文档与端到端验收）
 
-尚未开始。
+### 文档交付
+
+| 文档 | 内容 |
+|---|---|
+| [DEPLOY_AppStore.md](file:///c:/Code/AppStore/docs/AppStore/DEPLOY_AppStore.md) | 环境要求、`.env` 配置、迁移、初始化管理员、启动、内网访问、备份、HTTPS、冒烟脚本、常见问题、升级 |
+| [INTEGRATION_AppStore.md](file:///c:/Code/AppStore/docs/AppStore/INTEGRATION_AppStore.md) | 更新接口约定、Kotlin 与 Flutter 最小接入示例、下载/安装要点与常见坑 |
+
+### F1–F12 端到端验收
+
+| 功能 | 结果 | 证据 |
+|---|---|---|
+| F1 应用档案 | 通过 | B4 浏览器新建 Android 应用；B6 脚本创建网页作品（201），详情返回 `type=WEB`、`webUrl`、1 张截图，SSR HTML 同时包含外部链接与截图地址 |
+| F2 APK 上传解析 | 通过 | B4 真实 APK 上传返回 201，解析包名 `com.packkeeper.packkeeper`、versionCode `4026`、versionName `1.0.0`、SHA-256 与文件大小；`apk.service` 5 例单测通过 |
+| F3 版本发布与回滚 | 通过 | B4 发布后在后台显示「已发布 / 当前版本」；`release.service` 9 例单测覆盖发布、设为当前、归档约束 |
+| F4 下载 | 通过 | `node scripts/api-smoke.mjs` 18 项全 PASS：票据 64 位签名、Range 206（两段）、篡改签名 403、越界 Range 416；详情 `downloadCount` 随下载递增（实测 3） |
+| F5 前台浏览 | 通过 | B4 浏览器验证关键词搜索、URL 查询参数、空态与 390px 窄屏；列表排序与筛选逻辑由 `app.service` 9 例单测覆盖 |
+| F6 网页作品 | 通过 | 脚本创建网页作品并上传截图：`detail.screenshots.length=1`，`/apps/web-smoke` HTML 含 `https://example.com` 与 `/api/assets/screenshots/`；截图灯箱为 B4 已实现组件 |
+| F7 管理员鉴权 | 通过 | `admin-smoke` 前 10 项 PASS：未登录后台接口 401、连续 5 次错误后 429、正确登录下发 Cookie；`POST /api/admin/logout` 返回 200 并按 DESIGN 约定清除 Cookie（无状态 JWT，不撤销已签发令牌） |
+| F8 更新检查接口 | 通过 | `api-smoke`：低版本检出更新且含签名地址、同版本无更新、未知包名 200 + `NOT_FOUND`；真机更新页实测结果一致 |
+| F9 客户端浏览与下载 | 通过 | 真机（Xiaomi 23127PN0CC）首页/详情正常；下载 100 MB 后调起 MIUI 安装器，安装完成且 `lastUpdateTime` 更新；截图见 [client-home.png](file:///c:/Code/AppStore/docs/AppStore/evidence/client-home.png)、[client-detail.png](file:///c:/Code/AppStore/docs/AppStore/evidence/client-detail.png) |
+| F10 客户端更新检测 | 通过 | 更新页先显示「已安装应用均为最新版本」；临时把库中版本号改为 4027 并刷新，正确显示「已安装 4026 → 最新 v1.0.0（4027）」及单条/全部更新入口，见 [client-update-detected.png](file:///c:/Code/AppStore/docs/AppStore/evidence/client-update-detected.png)；随后已还原 |
+| F11 商店自更新 | 部分通过 | 上传 v1.0.1(2) 并发布后，已安装的 v1.0.0(1) 启动弹出商店更新对话框（见 [client-self-update.png](file:///c:/Code/AppStore/docs/AppStore/evidence/client-self-update.png)），点击后完成 162 MB 下载并调起 MIUI 安装器；MIUI 对新 APK 云端扫描超时，最终安装未在验收时间内完成 |
+| F12 部署可配置 | 通过 | 全部配置来自 `.env.example`；`npm run build` + `npm start` 生产启动成功，验收脚本均运行于生产服务；客户端基地址可在设置页修改并即时生效 |
+
+### 构建与测试
+
+| 命令 | 结果 |
+|---|---|
+| `npm run typecheck` | 通过 |
+| `npm run lint` | 通过（0 error） |
+| `npm test` | 8 文件 / 47 用例全绿 |
+| `npm run build` | 成功，14 个页面（前台/后台 PPR，API 动态） |
+| `npm start` | 生产服务启动成功，用于本轮接口与页面验收 |
+| `node scripts/api-smoke.mjs` | 18/18 PASS |
+| `node scripts/admin-smoke.mjs` | 前 10 项 PASS；创建应用步骤因示例包名与现有应用冲突（`packageName` 唯一）中止，详见下方说明 |
+| `flutter analyze` | No issues found |
+| `flutter test` | 5/5 通过 |
+| `flutter build apk --release` | 成功，51.6 MB |
+
+### 未完成与说明
+
+1. **admin-smoke 后段**：脚本固定使用 `com.packkeeper.packkeeper` 作为示例包名，与已发布的真实应用冲突（`App.packageName` 唯一），创建返回 400。需在干净数据库执行，或换用与 `SMOKE_APK` 匹配的空闲包名。
+2. **F11 最终安装**：下载与安装器调起已验证；MIUI 对 162 MB 调试包的安全扫描未在验收时间内结束，未完成最后一步安装。真机普通应用安装已由 F9 覆盖。
+3. **真机断点续传**：接口侧 Range 206 已由 api-smoke 覆盖，客户端续传逻辑为代码走查；未在真机人为中断后验证。
+4. **自更新条目**：验收用的「应用商店」条目已删除。若需要客户端自更新，需在后台把自己发布为一个 Android 应用并保持 `packageName=com.appstore.appstore_client`。
+

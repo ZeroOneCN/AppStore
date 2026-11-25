@@ -38,8 +38,8 @@
 | 需求对齐（Align） | 已完成 | docs/AppStore/ALIGNMENT_AppStore.md、CONSENSUS_AppStore.md |
 | 架构设计（Architect） | 已完成 | docs/AppStore/DESIGN_AppStore.md |
 | 任务拆分（Atomize） | 已完成 | docs/AppStore/TASK_AppStore.md |
-| 开发实施（Automate） | 进行中：B5 完成 | 代码与 ACCEPTANCE_AppStore.md |
-| 验收总结（Assess） | 未开始 | FINAL_AppStore.md、TODO_AppStore.md |
+| 开发实施（Automate） | 已完成：B6 完成 | 代码与 ACCEPTANCE_AppStore.md |
+| 验收总结（Assess） | 已完成 | docs/AppStore/FINAL_AppStore.md、TODO_AppStore.md |
 
 ### 批次进度
 
@@ -50,10 +50,26 @@
 | B3 | T13 管理 API | 已完成 |
 | B4 | T14–T15 前台与后台界面 | 已完成 |
 | B5 | T16 Flutter 客户端 | 已完成 |
-| B6 | T17–T18 接入示例、部署文档、端到端验收 | 未开始 |
+| B6 | T17–T18 接入示例、部署文档、端到端验收 | 已完成 |
 
 ## 四、约定
 
 - 密钥与配置只放 `.env`，不提交仓库
 - 代码注释与文档使用简体中文
 - 每个阶段完成后暂停，等待确认再进入下一阶段
+
+## 五、运行与文档
+
+```bash
+npm install && npx prisma generate
+npx prisma migrate deploy && npm run init-admin
+npm run dev
+```
+
+| 文档 | 用途 |
+|---|---|
+| [DEPLOY_AppStore.md](docs/AppStore/DEPLOY_AppStore.md) | 部署、备份、HTTPS、冒烟脚本 |
+| [INTEGRATION_AppStore.md](docs/AppStore/INTEGRATION_AppStore.md) | 自家应用接入更新（Kotlin/Flutter） |
+| [ACCEPTANCE_AppStore.md](docs/AppStore/ACCEPTANCE_AppStore.md) | 分批验收记录与真机证据 |
+| [FINAL_AppStore.md](docs/AppStore/FINAL_AppStore.md) | 交付总结 |
+| [TODO_AppStore.md](docs/AppStore/TODO_AppStore.md) | 待办与已知限制 |
