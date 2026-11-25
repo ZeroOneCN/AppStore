@@ -25,7 +25,22 @@ function readParam(params: Record<string, string | string[] | undefined>, key: s
 }
 
 /**
- * 应用墙数据区：读取筛选参数、查询数据并渲染居中布局的卡片网格。
+ * 顶部统计项。
+ * @param props.label 说明文字
+ * @param props.value 数值
+ * @returns 统计卡片
+ */
+function Stat({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-2xl border border-black/[0.06] bg-white/80 px-4 py-3 text-center backdrop-blur-sm dark:border-white/10 dark:bg-white/[0.06]">
+      <dt className="text-[11px] text-neutral-500 dark:text-neutral-400">{label}</dt>
+      <dd className="mt-1 text-xl font-semibold tracking-tight tabular-nums">{value}</dd>
+    </div>
+  );
+}
+
+/**
+ * 应用墙数据区：读取筛选参数、查询数据并渲染全宽布局。
  * @param props.searchParams 地址栏查询参数
  * @returns 品牌区、筛选栏与卡片网格
  */
@@ -45,7 +60,7 @@ async function AppWall({ searchParams }: { searchParams: SearchParams }) {
       : undefined,
   };
 
-  // 同时取未筛选数据用于生成分类与标签选项
+  // 同时取未筛选数据用于生成分类、标签与顶部统计
   const [items, allItems] = await Promise.all([listPublicApps(filters), listPublicApps({})]);
 
   const categories = Array.from(new Set(allItems.map((item) => item.category))).sort((a, b) =>
@@ -55,33 +70,48 @@ async function AppWall({ searchParams }: { searchParams: SearchParams }) {
     a.localeCompare(b, "zh-CN"),
   );
 
+  const androidCount = allItems.filter((item) => item.type === "ANDROID").length;
+  const webCount = allItems.length - androidCount;
   const filtered = Boolean(filters.q || filters.type || filters.category || filters.tag);
 
   return (
-    <div className="page-center py-10 sm:py-14">
-      {/* 品牌区：大标题居中，作为页面视觉重心 */}
-      <header className="mx-auto max-w-3xl text-center">
-        <span className="inline-flex items-center gap-2 rounded-full border border-brand/15 bg-brand/[0.06] px-3 py-1 text-[11px] font-medium tracking-wide text-brand">
-          <span className="h-1.5 w-1.5 rounded-full bg-brand" />
-          {filtered ? "筛选结果" : "个人应用商店"}
-        </span>
-        <h1 className="mt-5 text-[34px] leading-[1.1] font-semibold tracking-[-0.02em] sm:text-5xl">
-          {filtered ? "找到这些作品" : "发现你的应用"}
-        </h1>
-        <p className="mx-auto mt-3 max-w-xl text-[15px] leading-6 text-neutral-500 dark:text-neutral-400">
-          {filtered
-            ? `共 ${items.length} 个符合条件的作品，试试调整筛选条件`
-            : `共 ${items.length} 个作品 · 自建分发，下载即安装`}
-        </p>
+    <div className="flex flex-1 flex-col py-6 sm:py-8">
+      {/* 顶部品牌区：全宽铺满并展示统计信息 */}
+      <header className="relative overflow-hidden rounded-[28px] border border-black/[0.06] bg-white/70 px-6 py-7 shadow-[0_1px_2px_rgba(0,0,0,0.04)] backdrop-blur-md sm:px-10 sm:py-9 dark:border-white/10 dark:bg-white/[0.04]">
+        <div className="pointer-events-none absolute -top-28 -right-20 h-72 w-72 rounded-full bg-brand/15 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-32 left-1/3 h-64 w-64 rounded-full bg-brand/5 blur-3xl" />
+
+        <div className="relative flex flex-col gap-7 lg:flex-row lg:items-end lg:justify-between">
+          <div className="min-w-0">
+            <span className="inline-flex items-center gap-2 rounded-full border border-brand/15 bg-brand/[0.06] px-3 py-1 text-[11px] font-medium tracking-wide text-brand">
+              <span className="h-1.5 w-1.5 rounded-full bg-brand" />
+              {filtered ? "筛选结果" : "个人应用商店"}
+            </span>
+            <h1 className="mt-4 text-[32px] leading-[1.1] font-semibold tracking-[-0.02em] sm:text-[42px]">
+              {filtered ? "找到这些作品" : "发现你的应用"}
+            </h1>
+            <p className="mt-3 max-w-2xl text-[15px] leading-6 text-neutral-500 dark:text-neutral-400">
+              {filtered
+                ? `共 ${items.length} 个符合条件的作品，可继续调整筛选条件`
+                : "自建分发中心，Android 应用与网页作品统一管理与下载"}
+            </p>
+          </div>
+
+          <dl className="grid w-full grid-cols-3 gap-3 lg:w-auto lg:min-w-[360px]">
+            <Stat label="作品总数" value={allItems.length} />
+            <Stat label="Android" value={androidCount} />
+            <Stat label="网页作品" value={webCount} />
+          </dl>
+        </div>
       </header>
 
-      <div className="mx-auto mt-8 w-full max-w-5xl">
+      <div className="mt-5">
         <FilterBar categories={categories} tags={tags} />
       </div>
 
-      <div className="mx-auto w-full max-w-6xl">
-        {items.length === 0 ? (
-          <div className="card-apple mx-auto mt-6 grid max-w-lg place-items-center px-6 py-14 text-center">
+      {items.length === 0 ? (
+        <div className="card-apple mt-5 grid min-h-[320px] flex-1 place-items-center px-6 text-center">
+          <div>
             <p className="text-base font-medium">
               {filtered ? "没有符合条件的应用" : "还没有发布任何应用"}
             </p>
@@ -89,14 +119,14 @@ async function AppWall({ searchParams }: { searchParams: SearchParams }) {
               {filtered ? "试试更换关键词或清空筛选条件" : "管理员发布应用后会显示在这里"}
             </p>
           </div>
-        ) : (
-          <div className="mt-6 grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(240px,1fr))] sm:gap-4">
-            {items.map((app) => (
-              <AppCard key={app.id} app={app} />
-            ))}
-          </div>
-        )}
-      </div>
+        </div>
+      ) : (
+        <div className="mt-5 grid flex-1 auto-rows-fr content-start gap-4 [grid-template-columns:repeat(auto-fill,minmax(280px,1fr))]">
+          {items.map((app) => (
+            <AppCard key={app.id} app={app} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -107,16 +137,12 @@ async function AppWall({ searchParams }: { searchParams: SearchParams }) {
  */
 function WallSkeleton() {
   return (
-    <div className="page-center animate-pulse py-10 sm:py-14">
-      <div className="mx-auto w-full max-w-3xl">
-        <div className="mx-auto h-5 w-24 rounded-full bg-black/[0.06] dark:bg-white/10" />
-        <div className="mx-auto mt-5 h-10 w-72 max-w-full rounded-xl bg-black/[0.06] dark:bg-white/10" />
-        <div className="mx-auto mt-3 h-4 w-56 max-w-full rounded bg-black/[0.05] dark:bg-white/[0.07]" />
-      </div>
-      <div className="mx-auto mt-8 h-36 w-full max-w-5xl rounded-2xl bg-black/[0.05] dark:bg-white/[0.07]" />
-      <div className="mx-auto mt-6 grid w-full max-w-6xl gap-3 [grid-template-columns:repeat(auto-fill,minmax(240px,1fr))] sm:gap-4">
-        {Array.from({ length: 6 }).map((_, index) => (
-          <div key={index} className="h-40 rounded-2xl bg-black/[0.05] dark:bg-white/[0.07]" />
+    <div className="flex flex-1 animate-pulse flex-col py-6 sm:py-8">
+      <div className="h-[190px] rounded-[28px] bg-black/[0.05] dark:bg-white/[0.07]" />
+      <div className="mt-5 h-36 rounded-2xl bg-black/[0.05] dark:bg-white/[0.07]" />
+      <div className="mt-5 grid flex-1 content-start gap-4 [grid-template-columns:repeat(auto-fill,minmax(280px,1fr))]">
+        {Array.from({ length: 8 }).map((_, index) => (
+          <div key={index} className="h-40 rounded-[22px] bg-black/[0.05] dark:bg-white/[0.07]" />
         ))}
       </div>
     </div>
@@ -130,7 +156,7 @@ function WallSkeleton() {
  */
 export default function HomePage({ searchParams }: { searchParams: SearchParams }) {
   return (
-    <section className="mx-auto w-full max-w-6xl px-4 sm:px-6">
+    <section className="page-shell flex flex-1 flex-col">
       <Suspense fallback={<WallSkeleton />}>
         <AppWall searchParams={searchParams} />
       </Suspense>

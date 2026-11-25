@@ -71,7 +71,7 @@ async function AdminAppContent({ params }: { params: RouteParams }) {
   }));
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
+    <div className="w-full space-y-6">
       <div>
         <Link
           href="/admin/apps"
@@ -182,7 +182,7 @@ export default function AdminAppDetailPage({ params }: { params: RouteParams }) 
   return (
     <Suspense
       fallback={
-        <div className="mx-auto max-w-5xl animate-pulse space-y-4">
+        <div className="w-full animate-pulse space-y-4">
           <div className="h-4 w-24 rounded bg-neutral-200 dark:bg-neutral-800" />
           <div className="h-14 w-64 rounded-xl bg-neutral-200 dark:bg-neutral-800" />
           <div className="h-72 rounded-2xl bg-neutral-200 dark:bg-neutral-800" />

@@ -32,7 +32,7 @@ async function AppDetailContent({ params }: { params: RouteParams }) {
   const release = app.currentRelease;
 
   return (
-    <div className="page-center py-10 sm:py-14">
+    <div className="flex flex-1 flex-col py-6 sm:py-8">
       <Link
         href="/"
         className="inline-flex w-fit items-center gap-1 text-sm text-neutral-500 transition hover:text-brand dark:text-neutral-400"
@@ -40,7 +40,7 @@ async function AppDetailContent({ params }: { params: RouteParams }) {
         ← 返回应用墙
       </Link>
 
-      <div className="mt-4 grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="mt-4 grid flex-1 gap-6 lg:grid-cols-[minmax(0,1fr)_360px] xl:grid-cols-[minmax(0,1fr)_400px]">
         <div className="min-w-0 space-y-4">
           {/* 应用头部：iOS 应用页式的居中图标与标题 */}
           <header className="card-apple flex flex-col items-center gap-4 p-6 text-center sm:flex-row sm:items-start sm:p-7 sm:text-left">
@@ -214,9 +214,9 @@ async function AppDetailContent({ params }: { params: RouteParams }) {
  */
 function DetailSkeleton() {
   return (
-    <div className="page-center animate-pulse py-10 sm:py-14">
+    <div className="flex flex-1 animate-pulse flex-col py-6 sm:py-8">
       <div className="h-4 w-24 rounded bg-black/[0.06] dark:bg-white/10" />
-      <div className="mt-4 grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="mt-4 grid flex-1 gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="space-y-4">
           <div className="h-40 rounded-2xl bg-black/[0.05] dark:bg-white/[0.07]" />
           <div className="h-48 rounded-2xl bg-black/[0.05] dark:bg-white/[0.07]" />
@@ -234,7 +234,7 @@ function DetailSkeleton() {
  */
 export default function AppDetailPage({ params }: { params: RouteParams }) {
   return (
-    <section className="mx-auto w-full max-w-5xl px-4 sm:px-6">
+    <section className="page-shell flex flex-1 flex-col">
       <Suspense fallback={<DetailSkeleton />}>
         <AppDetailContent params={params} />
       </Suspense>

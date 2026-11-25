@@ -284,27 +284,44 @@ export async function getAppById(id: string): Promise<App> {
 }
 
 /**
- * 创建应用。
+ * 解析可用的访问标识，被占用时自动追加序号。
+ * @param base 期望的访问标识
+ * @returns 未被占用的访问标识
+ * @throws AppError 连续冲突超过上限时抛出
+ */
+async function resolveUniqueSlug(base: string): Promise<string> {
+  for (let index = 1; index <= 50; index += 1) {
+    const candidate = index === 1 ? base : `${base.slice(0, 45)}-${index}`;
+    const exists = await prisma.app.findUnique({ where: { slug: candidate }, select: { id: true } });
+    if (!exists) return candidate;
+  }
+  throw new AppError("VALIDATION_FAILED", "访问标识冲突过多，请手动修改后重试");
+}
+
+/**
+ * 创建应用，访问标识重名时自动追加序号。
  * @param input 应用字段
  * @returns 新建的应用记录
- * @throws AppError 字段非法或 slug/包名重复时抛出
+ * @throws AppError 字段非法或包名重复时抛出
  */
 export async function createApp(input: AppInput): Promise<App> {
   const data = normalizeInput(input);
 
-  const existing = await prisma.app.findFirst({
-    where: { OR: [{ slug: data.slug }, ...(data.packageName ? [{ packageName: data.packageName }] : [])] },
-  });
-  if (existing) {
-    throw new AppError(
-      "VALIDATION_FAILED",
-      existing.slug === data.slug ? "slug 已被占用" : "该包名已存在于其他应用",
-    );
+  if (data.packageName) {
+    const packageOwner = await prisma.app.findFirst({
+      where: { packageName: data.packageName },
+      select: { id: true },
+    });
+    if (packageOwner) {
+      throw new AppError("VALIDATION_FAILED", "该包名已存在于其他应用");
+    }
   }
+
+  const slug = await resolveUniqueSlug(data.slug);
 
   return prisma.app.create({
     data: {
-      slug: data.slug,
+      slug,
       name: data.name,
       summary: data.summary,
       description: data.description ?? "",

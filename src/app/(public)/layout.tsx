@@ -12,7 +12,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
   return (
     <div className="flex min-h-screen flex-col text-neutral-900 dark:text-neutral-50">
       <header className="glass-bar sticky top-0 z-20">
-        <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between gap-4 px-4 sm:h-16 sm:px-6">
+        <div className="page-shell flex h-14 items-center justify-between gap-4 sm:h-16">
           <Link href="/" className="group flex min-w-0 items-center gap-2.5">
             <BrandLogo size={30} className="transition group-hover:scale-105" />
             <span className="truncate text-[15px] font-semibold tracking-tight">{siteName}</span>
@@ -32,7 +32,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
       <main className="flex flex-1 flex-col">{children}</main>
 
       <footer className="border-t border-black/[0.06] py-5 dark:border-white/10">
-        <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-2 px-4 text-[11px] text-neutral-500 sm:px-6 dark:text-neutral-400">
+        <div className="page-shell flex flex-wrap items-center justify-between gap-2 text-[11px] text-neutral-500 dark:text-neutral-400">
           <span>个人应用与网页作品的分发展示中心</span>
           <Link
             href="/admin/login"

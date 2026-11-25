@@ -199,3 +199,13 @@ HTTP 冒烟实测明细（种子数据：`smoke-pack`，真实 APK 4026 版，�
 | 垂直居中 | 通过 | Web 统一使用 `.page-center`：内容较少时垂直居中、内容较多时自然撑开；Flutter 加载/错误/空态保持居中 |
 | 应用图标 | 通过 | 由新 LOGO 生成各密度 Android 启动图标（mdpi–xxxhdpi），随 release APK 安装生效 |
 | 构建与测试 | 通过 | `npm run typecheck` / `lint` / `build` 通过；`flutter analyze` 0 issue；`flutter test` 5/5；`flutter build apk --release` 成功 |
+
+### Web 全宽布局与标识符自动生成（B8）
+
+| 项目 | 结果 | 证据 |
+|---|---|---|
+| 统一页面尺寸 | 通过 | 新增 `.page-shell`（最大宽度 1440px），前台首页、应用详情、后台外壳与列表全部复用同一容器宽度与内边距 |
+| 全宽铺满 | 通过 | 首页顶部品牌区横跨整行，右侧展示作品总数/Android/网页作品统计；筛选栏与卡片网格同宽，卡片最小宽度 280px 自适应多列并等高 |
+| 标识符自动生成 | 通过 | 新建应用输入名称时按拼音自动生成访问标识（如「测试应用」→ `ce-shi-ying-yong`），手动修改后不再覆盖，支持「重新生成」 |
+| 重名处理 | 通过 | 创建应用时 slug 重复自动追加序号（如 `notes-2`），包名重复仍明确报错；单测 `重复 slug 自动追加序号，重复包名会被拒绝` 通过 |
+| 构建与测试 | 通过 | `npm run typecheck` / `lint` / `build` 通过，`npm test` 47/47；浏览器验证首页与后台新建页，见 [web-home-fullwidth.jpg](file:///c:/Code/AppStore/docs/AppStore/evidence/web-home-fullwidth.jpg)、[web-admin-slug-auto.jpg](file:///c:/Code/AppStore/docs/AppStore/evidence/web-admin-slug-auto.jpg) |

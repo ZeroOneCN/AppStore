@@ -7,7 +7,7 @@ import { AppForm } from "@/components/admin/app-form";
  */
 export default function AdminNewAppPage() {
   return (
-    <div className="mx-auto max-w-4xl">
+    <div className="w-full">
       <Link
         href="/admin/apps"
         className="inline-flex items-center gap-1 text-sm text-neutral-500 transition hover:text-brand dark:text-neutral-400"

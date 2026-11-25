@@ -25,7 +25,7 @@ async function AdminShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col text-neutral-900 dark:text-neutral-50">
       <header className="glass-bar sticky top-0 z-20">
-        <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between gap-3 px-4 sm:h-16 sm:px-6">
+        <div className="page-shell flex h-14 items-center justify-between gap-3 sm:h-16">
           <div className="flex min-w-0 items-center gap-3 sm:gap-4">
             <Link href="/admin/apps" className="flex shrink-0 items-center gap-2">
               <BrandLogo size={28} />
@@ -47,9 +47,7 @@ async function AdminShell({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </header>
-      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col justify-center px-4 py-8 sm:px-6 sm:py-10">
-        {children}
-      </main>
+      <main className="page-shell flex flex-1 flex-col justify-center py-8 sm:py-10">{children}</main>
     </div>
   );
 }

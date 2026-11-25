@@ -31,12 +31,15 @@ describe("应用服务", () => {
     expect(app.pinned).toBe(false);
   });
 
-  it("拒绝重复 slug 与重复包名", async () => {
+  it("重复 slug 自动追加序号，重复包名会被拒绝", async () => {
     await createApp({ ...ANDROID_BASE, slug: "notes" });
-    await expect(
-      createApp({ ...ANDROID_BASE, slug: "notes", packageName: "com.demo.other" }),
-    ).rejects.toMatchObject({ code: "VALIDATION_FAILED" });
-    await expect(createApp({ ...ANDROID_BASE, slug: "notes-2" })).rejects.toMatchObject({
+    const duplicated = await createApp({
+      ...ANDROID_BASE,
+      slug: "notes",
+      packageName: "com.demo.other",
+    });
+    expect(duplicated.slug).toBe("notes-2");
+    await expect(createApp({ ...ANDROID_BASE, slug: "notes-3" })).rejects.toMatchObject({
       code: "VALIDATION_FAILED",
     });
   });

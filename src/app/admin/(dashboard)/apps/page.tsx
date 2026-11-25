@@ -31,7 +31,7 @@ async function AppsContent() {
       </div>
 
       {apps.length === 0 ? (
-        <div className="card-apple grid place-items-center px-6 py-16 text-center">
+        <div className="card-apple grid min-h-[420px] place-items-center px-6 text-center">
           <p className="text-base font-medium">还没有应用</p>
           <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
             先创建应用，再上传 APK 或填写网页链接
@@ -44,7 +44,7 @@ async function AppsContent() {
           </Link>
         </div>
       ) : (
-        <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(280px,1fr))]">
+        <div className="grid auto-rows-fr gap-4 [grid-template-columns:repeat(auto-fill,minmax(300px,1fr))]">
           {apps.map((app) => (
             <Link
               key={app.id}
@@ -111,8 +111,8 @@ export default function AdminAppsPage() {
   return (
     <Suspense
       fallback={
-        <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(280px,1fr))]">
-          {Array.from({ length: 4 }).map((_, index) => (
+        <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(300px,1fr))]">
+          {Array.from({ length: 8 }).map((_, index) => (
             <div key={index} className="h-36 animate-pulse rounded-2xl bg-neutral-200 dark:bg-neutral-800" />
           ))}
         </div>

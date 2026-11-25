@@ -111,7 +111,12 @@ body {
     @apply w-full rounded-xl border border-black/10 bg-white px-3.5 py-2.5 text-sm text-neutral-900 outline-none transition placeholder:text-neutral-400 focus:border-brand/50 focus:ring-4 focus:ring-brand/10 dark:border-white/12 dark:bg-[#1c1c1e] dark:text-neutral-100 dark:focus:border-brand/60;
   }
 
-  /* 页面主容器：内容较少时垂直居中，内容较多时自然撑开 */
+  /* 全站统一页面容器：前台、后台使用同一最大宽度与内边距 */
+  .page-shell {
+    @apply mx-auto w-full max-w-[1440px] px-4 sm:px-6 lg:px-10;
+  }
+
+  /* 内容较少的页面（登录、空态）垂直居中 */
   .page-center {
     @apply flex min-h-[calc(100svh-9rem)] flex-col justify-center;
   }

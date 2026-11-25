@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { HelpTip } from "./help-tip";
 import type { AdminAppData } from "./types";
+import { generateSlug } from "@/lib/slug";
 import { errorMessageOf, inputClass, labelClass, primaryButtonClass } from "./ui";
 
 /** 表单内部状态 */
@@ -45,6 +46,8 @@ export function AppForm({ mode, app }: { mode: "create" | "edit"; app?: AdminApp
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  // 新建时访问标识默认跟随名称自动生成，手动修改后不再覆盖
+  const [slugTouched, setSlugTouched] = useState(mode === "edit");
 
   /**
    * 更新单个表单字段。
@@ -54,6 +57,28 @@ export function AppForm({ mode, app }: { mode: "create" | "edit"; app?: AdminApp
    */
   function update<K extends keyof FormState>(key: K, value: FormState[K]): void {
     setForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  /**
+   * 更新应用名称；访问标识未被手动修改时同步自动生成。
+   * @param value 应用名称
+   * @returns 无
+   */
+  function updateName(value: string): void {
+    setForm((prev) => ({
+      ...prev,
+      name: value,
+      slug: slugTouched ? prev.slug : generateSlug(value),
+    }));
+  }
+
+  /**
+   * 按当前名称重新生成访问标识。
+   * @returns 无
+   */
+  function regenerateSlug(): void {
+    setSlugTouched(false);
+    setForm((prev) => ({ ...prev, slug: generateSlug(prev.name) }));
   }
 
   /**
@@ -68,7 +93,7 @@ export function AppForm({ mode, app }: { mode: "create" | "edit"; app?: AdminApp
     setNotice(null);
 
     const payload = {
-      slug: form.slug.trim(),
+      slug: form.slug.trim() || generateSlug(form.name),
       name: form.name.trim(),
       summary: form.summary.trim(),
       description: form.description,
@@ -126,25 +151,37 @@ export function AppForm({ mode, app }: { mode: "create" | "edit"; app?: AdminApp
               required
               maxLength={60}
               value={form.name}
-              onChange={(event) => update("name", event.target.value)}
+              onChange={(event) => updateName(event.target.value)}
               className={inputClass}
               placeholder="例如：包裹管家"
             />
           </div>
 
           <div>
-            <label htmlFor="slug" className={labelClass}>
-              访问标识
-              <HelpTip text="用于生成访问地址 /apps/{slug}，仅支持 2-48 位小写字母、数字与连字符，创建后仍可修改。" />
-            </label>
+            <div className="mb-1.5 flex items-center justify-between gap-2">
+              <label htmlFor="slug" className="flex items-center gap-1.5 text-sm font-medium">
+                访问标识
+                <HelpTip text="根据应用名称自动生成，可手动修改；仅支持 2-48 位小写字母、数字与连字符，重名时会自动追加序号。" />
+              </label>
+              <button
+                type="button"
+                onClick={regenerateSlug}
+                className="shrink-0 text-xs font-medium text-brand transition hover:text-brand-deep"
+              >
+                重新生成
+              </button>
+            </div>
             <input
               id="slug"
               required
               maxLength={48}
               value={form.slug}
-              onChange={(event) => update("slug", event.target.value)}
+              onChange={(event) => {
+                setSlugTouched(true);
+                update("slug", event.target.value);
+              }}
               className={inputClass}
-              placeholder="例如：pack-keeper"
+              placeholder="输入名称后自动生成"
             />
           </div>
 
