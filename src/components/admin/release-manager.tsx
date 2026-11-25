@@ -116,6 +116,34 @@ export function ReleaseManager({
   }
 
   /**
+   * 删除历史版本（当前版本禁止删除）。
+   * @param releaseId 版本 ID
+   * @param versionName 版本名称，用于确认提示
+   * @returns 无
+   */
+  async function handleDelete(releaseId: string, versionName: string): Promise<void> {
+    if (!window.confirm(`确定删除 v${versionName}？安装包文件会一并删除，且不可恢复。`)) return;
+
+    setActing(`${releaseId}:delete`);
+    setError(null);
+    setNotice(null);
+    try {
+      const response = await fetch(`/api/admin/releases/${releaseId}`, { method: "DELETE" });
+      if (!response.ok) {
+        const data: unknown = await response.json().catch(() => null);
+        setError(errorMessageOf(data, "删除失败，请稍后重试"));
+        return;
+      }
+      setNotice("已删除该版本");
+      router.refresh();
+    } catch {
+      setError("网络异常，删除失败");
+    } finally {
+      setActing(null);
+    }
+  }
+
+  /**
    * 执行发布、设为当前或归档操作。
    * @param releaseId 版本 ID
    * @param action 操作类型
@@ -290,6 +318,17 @@ export function ReleaseManager({
                       className="rounded-lg border border-neutral-200 px-2.5 py-1 text-xs text-neutral-500 transition hover:bg-neutral-100 disabled:opacity-60 dark:border-neutral-700 dark:text-neutral-400 dark:hover:bg-neutral-800"
                     >
                       {acting === `${release.id}:archive` ? "归档中…" : "归档"}
+                    </button>
+                  ) : null}
+
+                  {!release.isCurrent ? (
+                    <button
+                      type="button"
+                      onClick={() => void handleDelete(release.id, release.versionName)}
+                      disabled={acting !== null}
+                      className="rounded-lg border border-rose-200 px-2.5 py-1 text-xs text-rose-600 transition hover:bg-rose-50 disabled:opacity-60 dark:border-rose-500/40 dark:text-rose-300 dark:hover:bg-rose-500/10"
+                    >
+                      {acting === `${release.id}:delete` ? "删除中…" : "删除"}
                     </button>
                   ) : null}
                 </div>

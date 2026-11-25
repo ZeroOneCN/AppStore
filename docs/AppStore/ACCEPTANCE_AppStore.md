@@ -219,3 +219,21 @@ HTTP 冒烟实测明细（种子数据：`smoke-pack`，真实 APK 4026 版，�
 | 首屏内容填充 | 通过 | 应用管理页新增「应用总数 / 已发布 / Android / 网页作品」四项概览统计，桌面 4 列、窄屏 2 列；Suspense 骨架同步为该结构 |
 | 浏览器验证 | 通过 | 登录后访问 `/admin/apps`：标题与统计数据紧接导航栏，无大片空白、无控制台报错；HTML 校验含「应用总数/已发布/Android/网页作品」，见 [web-admin-apps-overview.jpg](file:///c:/Code/AppStore/docs/AppStore/evidence/web-admin-apps-overview.jpg) |
 | 构建与测试 | 通过 | `npm run typecheck` / `lint` 通过，`npm run build` 成功（仅既有 Turbopack tracing 警告） |
+
+### 后台能力补全与 Web 元数据（B10）
+
+| 项目 | 结果 | 证据 |
+|---|---|---|
+| 列表检索 | 通过 | `/admin/apps` 支持关键词（名称/标识/简介/包名）、类型、可见性筛选与最近更新/名称/下载量排序，全部通过 URL 查询参数生效，可分享与刷新保持 |
+| 分页 | 通过 | 每页 12 条，上一页/下一页保留当前筛选条件；筛选无结果时展示「没有匹配的应用」与清除入口 |
+| 分类与标签候选 | 通过 | 表单分类输入绑定已有分类 datalist；标签区展示已有标签，点击一键补充，最多 10 个 |
+| 版本删除与回滚 | 通过 | 新增 `DELETE /api/admin/releases/{id}`，当前版本禁止删除；历史版本可删除并清理 APK；「设为当前」即回滚 |
+| 统计页 | 通过 | 新增 `/admin/stats`：应用/发布/版本/累计下载四项总量、类型分布与下载排行，排行可跳转到按下载排序的列表 |
+| 操作审计日志 | 通过 | 新增 `AuditLog` 模型与迁移；创建/更新/删除应用、上传/发布/归档/切换/删除版本、登录、改密均写入日志；`/admin/logs` 展示最近 100 条 |
+| 管理员设置 | 通过 | 新增 `/admin/settings` 修改密码：校验当前密码、新密码至少 8 位且不能与旧密码相同，成功后退出登录；`init-admin` 保留为兜底 |
+| PWA 与抓取 | 通过 | 新增 `/manifest.webmanifest`、`/robots.txt`（屏蔽 `/admin`、`/api`）、`/sitemap.xml`（首页 + 公开应用详情） |
+| 分享图 | 通过 | `/opengraph-image` 输出 1200×630 品牌蓝渐变 PNG，用于社交平台分享卡片 |
+| 暗色模式 | 通过 | 深色样式改为 class 驱动；前台与后台均提供「跟随系统 / 浅色 / 深色」切换并本地持久化，首屏前内联脚本避免闪白 |
+| 接口描述 | 通过 | `/api/openapi` 输出 OpenAPI 3.1 描述（公开浏览、下载、更新检查与后台接口），配套 [API_AppStore.md](file:///c:/Code/AppStore/docs/AppStore/API_AppStore.md) |
+| Code 目录应用归档 | 通过 | 登录后台 API 批量创建并发布：爱健身 v1.9.5、应用商店 v1.0.0、全屋智能 v1.0.0；包裹管家已存在保持不变；LifeOS 因无 APK 建为草稿条目。公开列表由 1 个增至 5 个，详情页均返回 200 |
+| 构建与测试 | 通过 | `npm run typecheck` / `lint` / `build` 通过，`npm test` 47/47；新增页面 `/admin/apps`、`/admin/stats`、`/admin/logs`、`/admin/settings`、`/manifest.webmanifest`、`/robots.txt`、`/sitemap.xml`、`/api/openapi`、`/opengraph-image` 均返回 200 |

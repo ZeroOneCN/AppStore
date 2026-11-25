@@ -1,6 +1,7 @@
 import { requireAdmin } from "@/server/http/session";
 import { toErrorResponse } from "@/server/infra/errors";
-import { archive } from "@/server/services/release.service";
+import { archive, getReleaseWithApp } from "@/server/services/release.service";
+import { logAudit } from "@/server/services/audit.service";
 
 /**
  * 归档版本，归档后不可再设为当前版本。
@@ -13,9 +14,11 @@ export async function POST(
   context: { params: Promise<{ id: string }> },
 ): Promise<Response> {
   try {
-    await requireAdmin();
+    const session = await requireAdmin();
     const { id } = await context.params;
     const release = await archive(id);
+    const owner = await getReleaseWithApp(id);
+    await logAudit(session.username, "release.archive", `${owner.app.name} v${release.versionName}`, "归档版本");
     return Response.json(release, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     return toErrorResponse(error);

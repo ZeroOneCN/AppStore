@@ -159,6 +159,37 @@ export async function login(username: string, password: string, clientKey: strin
 }
 
 /**
+ * 修改管理员密码：校验当前密码后写入新哈希。
+ * @param username 管理员用户名
+ * @param currentPassword 当前明文密码
+ * @param newPassword 新明文密码
+ * @returns 无
+ * @throws AppError 账号不存在、当前密码错误或新密码不合规时抛出
+ */
+export async function changePassword(
+  username: string,
+  currentPassword: string,
+  newPassword: string,
+): Promise<void> {
+  if (newPassword.length < 8) {
+    throw new AppError("VALIDATION_FAILED", "新密码至少 8 位");
+  }
+  if (newPassword === currentPassword) {
+    throw new AppError("VALIDATION_FAILED", "新密码不能与当前密码相同");
+  }
+
+  const user = await prisma.adminUser.findUnique({ where: { username } });
+  if (!user || !(await verifyPassword(currentPassword, user.passwordHash))) {
+    throw new AppError("UNAUTHORIZED", "当前密码不正确");
+  }
+
+  await prisma.adminUser.update({
+    where: { id: user.id },
+    data: { passwordHash: await hashPassword(newPassword) },
+  });
+}
+
+/**
  * 清空登录限流状态，仅用于单元测试。
  * @returns 无
  */

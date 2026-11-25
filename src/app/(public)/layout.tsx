@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { BrandLogo } from "@/components/brand-logo";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 /**
  * 前台公共布局：毛玻璃顶部导航与极简页脚。
@@ -18,13 +19,14 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
             <span className="truncate text-[15px] font-semibold tracking-tight">{siteName}</span>
           </Link>
 
-          <nav className="flex shrink-0 items-center gap-1 text-sm">
+          <nav className="flex shrink-0 items-center gap-1.5 text-sm">
             <Link
               href="/"
               className="rounded-full bg-brand/10 px-3 py-1.5 text-[13px] font-medium text-brand transition hover:bg-brand/15"
             >
               应用墙
             </Link>
+            <ThemeToggle />
           </nav>
         </div>
       </header>

@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { BrandLogo } from "@/components/brand-logo";
 import { AdminNav } from "@/components/admin/admin-nav";
 import { LogoutButton } from "@/components/admin/logout-button";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { requireAdmin } from "@/server/http/session";
 
 /**
@@ -35,6 +36,7 @@ async function AdminShell({ children }: { children: React.ReactNode }) {
           </div>
           <div className="flex shrink-0 items-center gap-2 text-xs">
             <span className="hidden text-neutral-500 sm:inline dark:text-neutral-400">{username}</span>
+            <ThemeToggle />
             <Link
               href="/"
               target="_blank"

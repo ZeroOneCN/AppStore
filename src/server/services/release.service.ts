@@ -2,6 +2,7 @@ import type { App, Release } from "@prisma/client";
 import { prisma } from "../db";
 import { AppError } from "../infra/errors";
 import { signDownloadPath } from "./signing.service";
+import { removeStoredFile } from "./storage.service";
 
 /** 创建版本草稿的输入 */
 export interface CreateDraftInput {
@@ -154,6 +155,30 @@ export async function archive(id: string): Promise<Release> {
   }
 
   return prisma.release.update({ where: { id }, data: { status: "ARCHIVED" } });
+}
+
+/**
+ * 删除版本记录并清理对应 APK 文件。
+ * @param id 版本 ID
+ * @returns 被删除版本的所属应用 ID
+ * @throws AppError 版本不存在或仍是当前版本时抛出
+ */
+export async function deleteRelease(id: string): Promise<{ appId: string; versionName: string }> {
+  const release = await prisma.release.findUnique({ where: { id } });
+  if (!release) throw new AppError("NOT_FOUND", "版本不存在");
+  if (release.isCurrent) {
+    throw new AppError("VALIDATION_FAILED", "当前版本不能删除，请先切换到其他版本");
+  }
+
+  await prisma.release.delete({ where: { id } });
+
+  try {
+    await removeStoredFile(release.filePath);
+  } catch {
+    // 文件清理失败不影响数据库删除结果
+  }
+
+  return { appId: release.appId, versionName: release.versionName };
 }
 
 /**

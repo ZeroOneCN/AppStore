@@ -26,9 +26,21 @@ interface FormState {
  * 应用新建 / 编辑表单。
  * @param props.mode 表单模式
  * @param props.app 编辑模式下的初始数据
+ * @param props.categories 已有分类，用于输入候选项
+ * @param props.tagOptions 已有标签，用于一键补充
  * @returns 表单界面
  */
-export function AppForm({ mode, app }: { mode: "create" | "edit"; app?: AdminAppData }) {
+export function AppForm({
+  mode,
+  app,
+  categories = [],
+  tagOptions = [],
+}: {
+  mode: "create" | "edit";
+  app?: AdminAppData;
+  categories?: string[];
+  tagOptions?: string[];
+}) {
   const router = useRouter();
   const [form, setForm] = useState<FormState>({
     slug: app?.slug ?? "",
@@ -70,6 +82,22 @@ export function AppForm({ mode, app }: { mode: "create" | "edit"; app?: AdminApp
       name: value,
       slug: slugTouched ? prev.slug : generateSlug(value),
     }));
+  }
+
+  /** 当前已填写的标签列表 */
+  const currentTags = form.tags
+    .split(/[,，]/)
+    .map((tag) => tag.trim())
+    .filter(Boolean);
+
+  /**
+   * 追加一个已有标签。
+   * @param tag 标签文本
+   * @returns 无
+   */
+  function appendTag(tag: string): void {
+    if (currentTags.includes(tag) || currentTags.length >= 10) return;
+    update("tags", [...currentTags, tag].join(", "));
   }
 
   /**
@@ -223,11 +251,17 @@ export function AppForm({ mode, app }: { mode: "create" | "edit"; app?: AdminApp
               id="category"
               required
               maxLength={30}
+              list="category-options"
               value={form.category}
               onChange={(event) => update("category", event.target.value)}
               className={inputClass}
               placeholder="例如：工具"
             />
+            <datalist id="category-options">
+              {categories.map((category) => (
+                <option key={category} value={category} />
+              ))}
+            </datalist>
           </div>
 
           <div>
@@ -242,6 +276,23 @@ export function AppForm({ mode, app }: { mode: "create" | "edit"; app?: AdminApp
               className={inputClass}
               placeholder="例如：离线, 本地存储"
             />
+            {tagOptions.filter((tag) => !currentTags.includes(tag)).length > 0 ? (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {tagOptions
+                  .filter((tag) => !currentTags.includes(tag))
+                  .slice(0, 8)
+                  .map((tag) => (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => appendTag(tag)}
+                      className="rounded-full border border-neutral-200 px-2 py-0.5 text-[11px] text-neutral-600 transition hover:border-brand/40 hover:text-brand dark:border-neutral-700 dark:text-neutral-300"
+                    >
+                      + {tag}
+                    </button>
+                  ))}
+              </div>
+            ) : null}
           </div>
         </div>
       </section>

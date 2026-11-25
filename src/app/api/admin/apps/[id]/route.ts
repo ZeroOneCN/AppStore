@@ -2,6 +2,7 @@ import { appUpdateSchema } from "@/server/http/app-schema";
 import { requireAdmin } from "@/server/http/session";
 import { AppError, toErrorResponse } from "@/server/infra/errors";
 import { deleteApp, updateApp } from "@/server/services/app.service";
+import { logAudit } from "@/server/services/audit.service";
 
 /**
  * 更新应用基本信息、可见性与置顶。
@@ -14,7 +15,7 @@ export async function PUT(
   context: { params: Promise<{ id: string }> },
 ): Promise<Response> {
   try {
-    await requireAdmin();
+    const session = await requireAdmin();
     const { id } = await context.params;
 
     const body: unknown = await request.json().catch(() => null);
@@ -24,6 +25,7 @@ export async function PUT(
     }
 
     const app = await updateApp(id, parsed.data);
+    await logAudit(session.username, "app.update", app.name, `字段：${Object.keys(parsed.data).join("、") || "无"}`);
     return Response.json(app, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     return toErrorResponse(error);
@@ -41,9 +43,10 @@ export async function DELETE(
   context: { params: Promise<{ id: string }> },
 ): Promise<Response> {
   try {
-    await requireAdmin();
+    const session = await requireAdmin();
     const { id } = await context.params;
-    await deleteApp(id);
+    const app = await deleteApp(id);
+    await logAudit(session.username, "app.delete", app.name, `访问标识 /${app.slug}`);
     return new Response(null, { status: 204 });
   } catch (error) {
     return toErrorResponse(error);

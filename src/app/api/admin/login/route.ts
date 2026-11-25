@@ -4,6 +4,7 @@ import { clientKeyFrom } from "@/server/http/session";
 import { SESSION_COOKIE } from "@/server/infra/constants";
 import { AppError, toErrorResponse } from "@/server/infra/errors";
 import { login, sessionCookieOptions } from "@/server/services/auth.service";
+import { logAudit } from "@/server/services/audit.service";
 
 const loginSchema = z.object({
   username: z.string().trim().min(1).max(64),
@@ -24,6 +25,7 @@ export async function POST(request: Request): Promise<Response> {
     }
 
     const token = await login(parsed.data.username, parsed.data.password, clientKeyFrom(request));
+    await logAudit(parsed.data.username, "admin.login", parsed.data.username, `来源 ${clientKeyFrom(request)}`);
     const response = NextResponse.json(
       { username: parsed.data.username },
       { headers: { "Cache-Control": "no-store" } },

@@ -1,6 +1,7 @@
 import { requireAdmin } from "@/server/http/session";
 import { toErrorResponse } from "@/server/infra/errors";
-import { setCurrent } from "@/server/services/release.service";
+import { getReleaseWithApp, setCurrent } from "@/server/services/release.service";
+import { logAudit } from "@/server/services/audit.service";
 
 /**
  * 将指定已发布版本设为当前版本（回滚）。
@@ -13,9 +14,11 @@ export async function POST(
   context: { params: Promise<{ id: string }> },
 ): Promise<Response> {
   try {
-    await requireAdmin();
+    const session = await requireAdmin();
     const { id } = await context.params;
     const release = await setCurrent(id);
+    const owner = await getReleaseWithApp(id);
+    await logAudit(session.username, "release.set-current", `${owner.app.name} v${release.versionName}`, "切换为当前版本");
     return Response.json(release, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     return toErrorResponse(error);

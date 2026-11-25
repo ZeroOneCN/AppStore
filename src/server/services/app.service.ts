@@ -393,9 +393,9 @@ export async function updateApp(id: string, input: Partial<AppInput>): Promise<A
 /**
  * 删除应用及其版本记录与磁盘文件。
  * @param id 应用 ID
- * @returns 无
+ * @returns 被删除的应用记录
  */
-export async function deleteApp(id: string): Promise<void> {
+export async function deleteApp(id: string): Promise<App> {
   const app = await getAppById(id);
   await prisma.app.delete({ where: { id } });
 
@@ -408,6 +408,8 @@ export async function deleteApp(id: string): Promise<void> {
       error: error instanceof Error ? error.message : String(error),
     });
   }
+
+  return app;
 }
 
 /**
@@ -457,4 +459,75 @@ export async function removeScreenshotAt(
   const remaining = screenshots.filter((_, position) => position !== index);
   await prisma.app.update({ where: { id }, data: { screenshots: JSON.stringify(remaining) } });
   return { removed, remaining };
+}
+
+/**
+ * 汇总后台已有的分类与标签，用于表单候选项。
+ * @returns 去重后的分类与标签数组（按出现次数倒序）
+ */
+export async function listAdminFacets(): Promise<{ categories: string[]; tags: string[] }> {
+  const apps = await prisma.app.findMany({ select: { category: true, tags: true } });
+  const categoryCount = new Map<string, number>();
+  const tagCount = new Map<string, number>();
+
+  for (const app of apps) {
+    categoryCount.set(app.category, (categoryCount.get(app.category) ?? 0) + 1);
+    for (const tag of parseJsonArray(app.tags)) {
+      tagCount.set(tag, (tagCount.get(tag) ?? 0) + 1);
+    }
+  }
+
+  const sortByCount = (map: Map<string, number>): string[] =>
+    [...map.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "zh-CN")).map(([key]) => key);
+
+  return { categories: sortByCount(categoryCount), tags: sortByCount(tagCount).slice(0, 30) };
+}
+
+/** 后台统计概览 */
+export interface AdminStats {
+  appTotal: number;
+  androidCount: number;
+  webCount: number;
+  publishedCount: number;
+  releaseTotal: number;
+  totalDownloads: number;
+  topApps: { id: string; name: string; slug: string; type: AppType; downloadCount: number }[];
+}
+
+/**
+ * 统计应用、版本与下载数据，供后台统计页展示。
+ * @returns 统计概览
+ */
+export async function getAdminStats(): Promise<AdminStats> {
+  const apps = await prisma.app.findMany({
+    orderBy: { downloadCount: "desc" },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      type: true,
+      downloadCount: true,
+      releases: { where: { isCurrent: true }, select: { id: true } },
+    },
+  });
+  const releaseTotal = await prisma.release.count();
+
+  return {
+    appTotal: apps.length,
+    androidCount: apps.filter((app) => app.type === "ANDROID").length,
+    webCount: apps.filter((app) => app.type !== "ANDROID").length,
+    publishedCount: apps.filter((app) => app.releases.length > 0).length,
+    releaseTotal,
+    totalDownloads: apps.reduce((sum, app) => sum + app.downloadCount, 0),
+    topApps: apps
+      .filter((app) => app.downloadCount > 0)
+      .slice(0, 10)
+      .map((app) => ({
+        id: app.id,
+        name: app.name,
+        slug: app.slug,
+        type: app.type as AppType,
+        downloadCount: app.downloadCount,
+      })),
+  };
 }

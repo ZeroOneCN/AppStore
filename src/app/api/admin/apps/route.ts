@@ -3,6 +3,7 @@ import { appCreateSchema } from "@/server/http/app-schema";
 import { requireAdmin } from "@/server/http/session";
 import { AppError, toErrorResponse } from "@/server/infra/errors";
 import { createApp, listAdminApps } from "@/server/services/app.service";
+import { logAudit } from "@/server/services/audit.service";
 
 /**
  * 后台应用列表，包含草稿与私有应用。
@@ -26,7 +27,7 @@ export async function GET(): Promise<Response> {
  */
 export async function POST(request: Request): Promise<Response> {
   try {
-    await requireAdmin();
+    const session = await requireAdmin();
 
     const body: unknown = await request.json().catch(() => null);
     const parsed = appCreateSchema.safeParse(body);
@@ -35,6 +36,7 @@ export async function POST(request: Request): Promise<Response> {
     }
 
     const app = await createApp(parsed.data);
+    await logAudit(session.username, "app.create", app.name, `访问标识 /${app.slug}`);
     return Response.json(app, { status: 201, headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     return toErrorResponse(error);

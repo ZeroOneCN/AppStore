@@ -11,7 +11,7 @@ import { ScreenshotManager } from "@/components/admin/screenshot-manager";
 import type { AdminAppData, AdminReleaseData } from "@/components/admin/types";
 import { formatDateTime } from "@/lib/format";
 import { isAppError } from "@/server/infra/errors";
-import { getAppById, parseJsonArray } from "@/server/services/app.service";
+import { getAppById, listAdminFacets, parseJsonArray } from "@/server/services/app.service";
 import { listAllReleases } from "@/server/services/release.service";
 
 /** 动态路由参数 */
@@ -34,7 +34,7 @@ async function AdminAppContent({ params }: { params: RouteParams }) {
     throw error;
   }
 
-  const releases = await listAllReleases(id);
+  const [releases, facets] = await Promise.all([listAllReleases(id), listAdminFacets()]);
 
   const app: AdminAppData = {
     id: record.id,
@@ -116,7 +116,7 @@ async function AdminAppContent({ params }: { params: RouteParams }) {
 
       <section>
         <h2 className="mb-3 text-sm font-semibold text-neutral-500 dark:text-neutral-400">基础信息</h2>
-        <AppForm mode="edit" app={app} />
+        <AppForm mode="edit" app={app} categories={facets.categories} tagOptions={facets.tags} />
       </section>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">

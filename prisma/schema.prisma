@@ -73,3 +73,19 @@ model Release {
   @@unique([appId, versionCode])
   @@index([appId, status, isCurrent])
 }
+
+/// 管理后台操作审计日志
+model AuditLog {
+  id        String   @id @default(cuid())
+  /// 操作者用户名
+  actor     String
+  /// 操作类型，如 app.create / release.publish
+  action    String
+  /// 操作对象，如应用名、版本号
+  target    String   @default("")
+  /// 补充说明
+  detail    String   @default("")
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}

@@ -10,6 +10,7 @@ import {
   streamApkToTemp,
 } from "@/server/services/apk.service";
 import { getAppById, updateAppIcon } from "@/server/services/app.service";
+import { logAudit } from "@/server/services/audit.service";
 import {
   assertVersionAvailable,
   createDraft,
@@ -42,7 +43,7 @@ export async function POST(
   request: Request,
   context: { params: Promise<{ id: string }> },
 ): Promise<Response> {
-  await requireAdmin();
+  const session = await requireAdmin();
   const { id } = await context.params;
 
   try {
@@ -100,6 +101,13 @@ export async function POST(
           });
         }
       }
+
+      await logAudit(
+        session.username,
+        "release.upload",
+        `${app.name} v${draft.versionName}`,
+        `${(uploaded.fileSize / 1024 / 1024).toFixed(1)} MB，版本号 ${draft.versionCode}`,
+      );
 
       return Response.json(
         {
