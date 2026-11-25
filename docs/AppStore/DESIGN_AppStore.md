@@ -244,7 +244,12 @@ model Release {
 | `POST /api/admin/apps/{id}/screenshots` | 追加截图（multipart，单张 ≤5MB） |
 | `DELETE /api/admin/apps/{id}/screenshots?index=` | 删除指定截图 |
 
-采用裸流而非 multipart 上传 APK：避免 200MB 文件在 Node 进程中整体缓冲。实现用 `Readable.fromWeb(request.body)` + `pipeline` 边落盘边算 SHA256，落盘后再解析 APK。
+采用裸流而非 multipart 上传 APK：避免 200MB 文件在 Node 进程中整体缓冲。实现用 `Readable.fromWeb(request.body)` + `pipeline` 边落盘边算 SHA256，落盘后再解析 APK；解析出 `versionCode` 后、落盘前先查重，避免覆盖既有版本文件。
+
+补充约定：
+- `GET /api/admin/apps` 返回的卡片含 `visibility` 字段，便于后台区分公开/私有；
+- `/api/assets/*` 对私有应用的图标与截图要求管理员会话（未登录 401），且响应不缓存；
+- 登录/登出通过 `Set-Cookie` 下发与清除，登出仅清 Cookie（JWT 无状态，剩余有效期由 `SESSION_TTL_SECONDS` 控制）。
 
 ## 6. 核心数据流
 

@@ -1,4 +1,5 @@
 import fs from "node:fs/promises";
+import { requireAdmin } from "@/server/http/session";
 import { prisma } from "@/server/db";
 import { AppError, toErrorResponse } from "@/server/infra/errors";
 import { resolveStoredPath } from "@/server/infra/paths";
@@ -34,9 +35,12 @@ export async function GET(
     if (!appId) throw new AppError("NOT_FOUND", "资源不存在");
 
     const app = await prisma.app.findUnique({ where: { id: appId }, select: { visibility: true } });
-    if (!app || app.visibility !== "PUBLIC") {
+    if (!app) {
       throw new AppError("NOT_FOUND", "资源不存在");
     }
+    // 私有应用的资源仅管理员可读
+    const isPublic = app.visibility === "PUBLIC";
+    if (!isPublic) await requireAdmin();
 
     const extension = segments[segments.length - 1].split(".").pop()?.toLowerCase() ?? "";
     const contentType = MIME_BY_EXTENSION[extension];
@@ -48,7 +52,7 @@ export async function GET(
     return new Response(new Uint8Array(data), {
       headers: {
         "Content-Type": contentType,
-        "Cache-Control": "public, max-age=86400",
+        "Cache-Control": isPublic ? "public, max-age=86400" : "no-store",
       },
     });
   } catch (error) {

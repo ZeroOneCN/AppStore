@@ -175,7 +175,7 @@ graph TD
 - **输出**：可断点续传的下载端点。
 - **约束**：不整体读入内存；文件缺失返回 404 并记录日志；不使用 `sendFile` 之类会吞 Range 的封装。
 - **验收**：`curl -I` 返回 `Accept-Ranges: bytes`；`curl -r 0-1023` 返回 206 且长度 1024；完整下载 SHA256 与库一致；续传不重复计数；过期链接 410。
-- **测试**：`scripts/api-smoke.ps1` 覆盖上述 5 项。
+- **测试**：`scripts/api-smoke.mjs` 覆盖上述 5 项。
 
 ### T12 更新检查接口
 
@@ -193,7 +193,7 @@ graph TD
 - **输出**：完整管理接口。
 - **约束**：上传必须流式，不得 `arrayBuffer()`；任一步失败清理临时文件与已落盘文件；登录限流生效。
 - **验收**：未登录全部 401；上传后返回解析结果与草稿；发布后公开接口立即可见；`PACKAGE_MISMATCH`、`VERSION_CONFLICT`、`FILE_TOO_LARGE` 均正确返回。
-- **测试**：`scripts/admin-smoke.ps1` 走完整链路。
+- **测试**：`scripts/admin-smoke.mjs` 走完整链路。
 
 ### T14 Web 前台界面
 

@@ -157,6 +157,32 @@ export async function archive(id: string): Promise<Release> {
 }
 
 /**
+ * 校验版本号未被占用，用于上传落盘前提前拦截重复版本。
+ * @param appId 应用 ID
+ * @param versionCode 版本号
+ * @returns 无
+ * @throws AppError 版本号已存在时抛出 VERSION_CONFLICT
+ */
+export async function assertVersionAvailable(appId: string, versionCode: number): Promise<void> {
+  const existing = await prisma.release.findFirst({ where: { appId, versionCode } });
+  if (existing) {
+    throw new AppError("VERSION_CONFLICT", `版本号 ${versionCode} 已存在`, {
+      releaseId: existing.id,
+    });
+  }
+}
+
+/**
+ * 判断某个存储文件是否仍被版本记录引用。
+ * @param filePath 以存储根目录为基准的相对路径
+ * @returns 被引用返回 true
+ */
+export async function isReleaseFileReferenced(filePath: string): Promise<boolean> {
+  const count = await prisma.release.count({ where: { filePath } });
+  return count > 0;
+}
+
+/**
  * 按 ID 查询版本（含所属应用）。
  * @param id 版本 ID
  * @returns 版本与应用

@@ -25,6 +25,7 @@ export interface AppCardDto {
   category: string;
   tags: string[];
   iconUrl: string | null;
+  visibility: Visibility;
   pinned: boolean;
   downloadCount: number;
   updatedAt: string;
@@ -155,6 +156,7 @@ function toCard(app: App & { releases: Release[] }): AppCardDto {
     category: app.category,
     tags: parseJsonArray(app.tags),
     iconUrl: assetUrl(app.iconPath),
+    visibility: app.visibility as Visibility,
     pinned: app.pinned,
     downloadCount: app.downloadCount,
     updatedAt: app.updatedAt.toISOString(),
@@ -387,4 +389,53 @@ export async function deleteApp(id: string): Promise<void> {
       error: error instanceof Error ? error.message : String(error),
     });
   }
+}
+
+/**
+ * 更新应用图标路径。
+ * @param id 应用 ID
+ * @param storedPath 图标相对路径
+ * @returns 无
+ * @throws AppError 应用不存在时抛出 NOT_FOUND
+ */
+export async function updateAppIcon(id: string, storedPath: string): Promise<void> {
+  await getAppById(id);
+  await prisma.app.update({ where: { id }, data: { iconPath: storedPath } });
+}
+
+/**
+ * 追加一张截图到应用。
+ * @param id 应用 ID
+ * @param storedPath 截图相对路径
+ * @returns 更新后的截图路径数组
+ * @throws AppError 应用不存在时抛出 NOT_FOUND
+ */
+export async function appendScreenshot(id: string, storedPath: string): Promise<string[]> {
+  const app = await getAppById(id);
+  const screenshots = [...parseJsonArray(app.screenshots), storedPath];
+  await prisma.app.update({ where: { id }, data: { screenshots: JSON.stringify(screenshots) } });
+  return screenshots;
+}
+
+/**
+ * 按索引删除应用截图。
+ * @param id 应用 ID
+ * @param index 截图索引（从 0 开始）
+ * @returns 被删除的路径与剩余路径数组
+ * @throws AppError 应用或截图不存在时抛出 NOT_FOUND
+ */
+export async function removeScreenshotAt(
+  id: string,
+  index: number,
+): Promise<{ removed: string; remaining: string[] }> {
+  const app = await getAppById(id);
+  const screenshots = parseJsonArray(app.screenshots);
+  if (!Number.isInteger(index) || index < 0 || index >= screenshots.length) {
+    throw new AppError("NOT_FOUND", "截图不存在");
+  }
+
+  const removed = screenshots[index];
+  const remaining = screenshots.filter((_, position) => position !== index);
+  await prisma.app.update({ where: { id }, data: { screenshots: JSON.stringify(remaining) } });
+  return { removed, remaining };
 }
