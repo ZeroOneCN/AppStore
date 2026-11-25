@@ -6,29 +6,54 @@ import { formatDateTime } from "@/lib/format";
 import { listAdminApps } from "@/server/services/app.service";
 
 /**
+ * 概览统计卡片。
+ * @param props.label 指标名称
+ * @param props.value 指标数值
+ * @param props.hint 补充说明
+ * @returns 统计卡片
+ */
+function StatCard({ label, value, hint }: { label: string; value: number; hint: string }) {
+  return (
+    <div className="card-apple px-4 py-3.5">
+      <dt className="text-[11px] text-neutral-500 dark:text-neutral-400">{label}</dt>
+      <dd className="mt-1 text-2xl font-semibold tracking-tight tabular-nums">{value}</dd>
+      <p className="mt-0.5 text-[11px] text-neutral-400">{hint}</p>
+    </div>
+  );
+}
+
+/**
  * 后台应用列表数据区。
- * @returns 应用卡片网格
+ * @returns 概览统计与应用卡片网格
  */
 async function AppsContent() {
   await connection();
   const apps = await listAdminApps();
 
+  const published = apps.filter((app) => app.currentVersion).length;
+  const androidCount = apps.filter((app) => app.type === "ANDROID").length;
+  const webCount = apps.length - androidCount;
+
   return (
     <>
-      <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">应用管理</h1>
           <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
-            共 {apps.length} 个应用，包含草稿与私有应用
+            统一管理应用信息、版本发布与安装包
           </p>
         </div>
-        <Link
-          href="/admin/apps/new"
-          className="btn-primary"
-        >
+        <Link href="/admin/apps/new" className="btn-primary">
           新建应用
         </Link>
       </div>
+
+      <dl className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatCard label="应用总数" value={apps.length} hint="包含草稿与私有应用" />
+        <StatCard label="已发布" value={published} hint="至少有一个正式版本" />
+        <StatCard label="Android" value={androidCount} hint="通过 APK 分发" />
+        <StatCard label="网页作品" value={webCount} hint="跳转外部链接" />
+      </dl>
 
       {apps.length === 0 ? (
         <div className="card-apple grid min-h-[420px] place-items-center px-6 text-center">
@@ -111,10 +136,24 @@ export default function AdminAppsPage() {
   return (
     <Suspense
       fallback={
-        <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(300px,1fr))]">
-          {Array.from({ length: 8 }).map((_, index) => (
-            <div key={index} className="h-36 animate-pulse rounded-2xl bg-neutral-200 dark:bg-neutral-800" />
-          ))}
+        <div className="animate-pulse">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div className="space-y-2">
+              <div className="h-8 w-40 rounded-lg bg-black/[0.06] dark:bg-white/10" />
+              <div className="h-4 w-64 max-w-full rounded bg-black/[0.05] dark:bg-white/[0.07]" />
+            </div>
+            <div className="h-10 w-24 rounded-xl bg-black/[0.06] dark:bg-white/10" />
+          </div>
+          <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <div key={index} className="h-[92px] rounded-2xl bg-black/[0.05] dark:bg-white/[0.07]" />
+            ))}
+          </div>
+          <div className="mt-6 grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(300px,1fr))]">
+            {Array.from({ length: 8 }).map((_, index) => (
+              <div key={index} className="h-40 rounded-2xl bg-black/[0.05] dark:bg-white/[0.07]" />
+            ))}
+          </div>
         </div>
       }
     >

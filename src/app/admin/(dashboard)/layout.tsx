@@ -47,7 +47,7 @@ async function AdminShell({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </header>
-      <main className="page-shell flex flex-1 flex-col justify-center py-8 sm:py-10">{children}</main>
+      <main className="page-shell flex flex-1 flex-col py-8 sm:py-10">{children}</main>
     </div>
   );
 }

@@ -209,3 +209,13 @@ HTTP 冒烟实测明细（种子数据：`smoke-pack`，真实 APK 4026 版，�
 | 标识符自动生成 | 通过 | 新建应用输入名称时按拼音自动生成访问标识（如「测试应用」→ `ce-shi-ying-yong`），手动修改后不再覆盖，支持「重新生成」 |
 | 重名处理 | 通过 | 创建应用时 slug 重复自动追加序号（如 `notes-2`），包名重复仍明确报错；单测 `重复 slug 自动追加序号，重复包名会被拒绝` 通过 |
 | 构建与测试 | 通过 | `npm run typecheck` / `lint` / `build` 通过，`npm test` 47/47；浏览器验证首页与后台新建页，见 [web-home-fullwidth.jpg](file:///c:/Code/AppStore/docs/AppStore/evidence/web-home-fullwidth.jpg)、[web-admin-slug-auto.jpg](file:///c:/Code/AppStore/docs/AppStore/evidence/web-admin-slug-auto.jpg) |
+
+### 后台应用管理页顶部留白修复（B9）
+
+| 项目 | 结果 | 证据 |
+|---|---|---|
+| 根因定位 | 通过 | 后台主内容容器 `main` 带 `justify-center`，内容高度不足一屏时被垂直居中，导致标题上方出现大片空白 |
+| 顶部对齐 | 通过 | `admin/(dashboard)/layout.tsx` 移除垂直居中，改为 `flex-1 flex-col py-8 sm:py-10`，标题紧贴导航栏下方 |
+| 首屏内容填充 | 通过 | 应用管理页新增「应用总数 / 已发布 / Android / 网页作品」四项概览统计，桌面 4 列、窄屏 2 列；Suspense 骨架同步为该结构 |
+| 浏览器验证 | 通过 | 登录后访问 `/admin/apps`：标题与统计数据紧接导航栏，无大片空白、无控制台报错；HTML 校验含「应用总数/已发布/Android/网页作品」，见 [web-admin-apps-overview.jpg](file:///c:/Code/AppStore/docs/AppStore/evidence/web-admin-apps-overview.jpg) |
+| 构建与测试 | 通过 | `npm run typecheck` / `lint` 通过，`npm run build` 成功（仅既有 Turbopack tracing 警告） |
