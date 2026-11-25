@@ -1,0 +1,39 @@
+"use client";
+
+import { useEffect } from "react";
+
+/**
+ * 全局错误边界，展示通用失败提示并记录错误。
+ * @param props.error 捕获到的异常
+ * @param props.reset 重置边界、重新渲染的回调
+ * @returns 错误提示界面
+ */
+export default function GlobalError({
+  error,
+  reset,
+}: {
+  error: Error & { digest?: string };
+  reset: () => void;
+}) {
+  useEffect(() => {
+    console.error("页面渲染失败", error);
+  }, [error]);
+
+  return (
+    <div className="grid min-h-[60vh] place-items-center px-6 text-center">
+      <div>
+        <h1 className="text-xl font-semibold">页面加载失败</h1>
+        <p className="mt-2 max-w-md text-sm text-neutral-500 dark:text-neutral-400">
+          {error.message || "发生了未预期的错误，请稍后重试。"}
+        </p>
+        <button
+          type="button"
+          onClick={reset}
+          className="mt-5 inline-flex rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-500"
+        >
+          重新加载
+        </button>
+      </div>
+    </div>
+  );
+}

@@ -195,6 +195,18 @@ export async function getReleaseWithApp(id: string): Promise<Release & { app: Ap
 }
 
 /**
+ * 查询某应用的全部版本（含草稿与归档），供管理后台展示与操作。
+ * @param appId 应用 ID
+ * @returns 版本记录数组（版本号倒序）
+ */
+export async function listAllReleases(appId: string): Promise<Release[]> {
+  return prisma.release.findMany({
+    where: { appId },
+    orderBy: { versionCode: "desc" },
+  });
+}
+
+/**
  * 查询某应用已发布的版本列表。
  * @param appId 应用 ID
  * @param limit 返回条数，默认 20
