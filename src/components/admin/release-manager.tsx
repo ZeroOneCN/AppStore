@@ -77,7 +77,10 @@ export function ReleaseManager({
     }
     const invalid = await checkApkFile(file);
     if (invalid) {
+      // 清空已选文件并重置输入框，避免继续使用可能已过期的文件快照
       setError(invalid);
+      setFile(null);
+      setFileInputKey((key) => key + 1);
       return;
     }
     setUploading(true);

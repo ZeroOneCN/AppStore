@@ -29,5 +29,5 @@ export async function checkApkFile(file: File): Promise<string | null> {
     }
   }
 
-  return "安装包不完整（缺少 ZIP 目录），可能复制或下载中断，请重新获取后再上传";
+  return "安装包不完整（缺少 ZIP 目录），请重新选择安装包后再试；如果文件刚生成或仍在复制，请等待写入完成";
 }

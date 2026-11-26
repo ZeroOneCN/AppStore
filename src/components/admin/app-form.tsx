@@ -115,6 +115,8 @@ export function AppForm({
   const [apkNote, setApkNote] = useState("");
   // 安装包上传进度（0-100），null 表示未在上传
   const [apkProgress, setApkProgress] = useState<number | null>(null);
+  // 重置安装包选择框用的 key，校验失败时强制重新选择
+  const [apkInputKey, setApkInputKey] = useState(0);
 
   /**
    * 更新单个表单字段。
@@ -178,7 +180,10 @@ export function AppForm({
     if (mode === "create" && apkFile && form.type === "ANDROID") {
       const invalid = await checkApkFile(apkFile);
       if (invalid) {
+        // 清空已选文件并重置输入框，避免继续使用可能已过期的文件快照
         setError(invalid);
+        setApkFile(null);
+        setApkInputKey((key) => key + 1);
         return;
       }
     }
@@ -461,6 +466,7 @@ export function AppForm({
                   <HelpTip text="新建时可直接选择 APK：提交后自动解析包名、版本号并发布为首个版本；也可以不上传，先创建空应用。" />
                 </label>
                 <input
+                  key={apkInputKey}
                   id="apk"
                   type="file"
                   accept=".apk,application/vnd.android.package-archive"
