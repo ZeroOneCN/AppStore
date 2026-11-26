@@ -19,15 +19,26 @@ import { requireAdminPage } from "@/server/http/guards";
 /** 动态路由参数 */
 type RouteParams = Promise<{ id: string }>;
 
+/** 查询参数：created=1 表示刚由新建页一步创建完成 */
+type RouteSearchParams = Promise<{ created?: string; version?: string }>;
+
 /**
  * 应用详情数据区：组装后台所需数据并渲染各管理模块。
  * @param props.params 路由参数
+ * @param props.searchParams 查询参数，用于展示创建成功提示
  * @returns 管理界面
  */
-async function AdminAppContent({ params }: { params: RouteParams }) {
+async function AdminAppContent({
+  params,
+  searchParams,
+}: {
+  params: RouteParams;
+  searchParams: RouteSearchParams;
+}) {
   await connection();
   await requireAdminPage();
   const { id } = await params;
+  const { created, version } = await searchParams;
 
   let record;
   try {
@@ -122,24 +133,23 @@ async function AdminAppContent({ params }: { params: RouteParams }) {
         </div>
       </div>
 
-      <section>
-        <h2 className="mb-3 text-sm font-semibold text-neutral-500 dark:text-neutral-400">基础信息</h2>
-        <AppForm
-          mode="edit"
-          app={app}
-          categories={facets.categories}
-          tagOptions={facets.tags}
-          developerOptions={developers.map((developer) => ({
-            id: developer.id,
-            username: developer.username,
-            displayName: developer.displayName,
-          }))}
-        />
-      </section>
+      {created === "1" ? (
+        <div
+          role="status"
+          className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3.5 dark:border-emerald-500/30 dark:bg-emerald-500/10"
+        >
+          <p className="text-sm font-medium text-emerald-800 dark:text-emerald-300">
+            应用已创建{version ? `，首个版本 v${version} 已发布` : ""}
+          </p>
+          <p className="mt-1 text-xs leading-5 text-emerald-700 dark:text-emerald-400">
+            已进入该应用的管理页：下方可直接上传新版本、维护截图，页面最底部可继续修改基础信息。
+          </p>
+        </div>
+      ) : null}
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
         <div className="space-y-6">
-          <section className="surface p-5">
+          <section id="releases" className="surface p-5">
             <h2 className="mb-3 text-sm font-semibold">版本管理</h2>
             <ReleaseManager appId={app.id} appType={app.type} releases={releaseData} />
           </section>
@@ -187,6 +197,21 @@ async function AdminAppContent({ params }: { params: RouteParams }) {
           </section>
         </aside>
       </div>
+
+      <section>
+        <h2 className="mb-3 text-sm font-semibold text-neutral-500 dark:text-neutral-400">基础信息</h2>
+        <AppForm
+          mode="edit"
+          app={app}
+          categories={facets.categories}
+          tagOptions={facets.tags}
+          developerOptions={developers.map((developer) => ({
+            id: developer.id,
+            username: developer.username,
+            displayName: developer.displayName,
+          }))}
+        />
+      </section>
     </div>
   );
 }
@@ -194,9 +219,16 @@ async function AdminAppContent({ params }: { params: RouteParams }) {
 /**
  * 后台应用详情页。
  * @param props.params 路由参数
+ * @param props.searchParams 查询参数
  * @returns 页面内容
  */
-export default function AdminAppDetailPage({ params }: { params: RouteParams }) {
+export default function AdminAppDetailPage({
+  params,
+  searchParams,
+}: {
+  params: RouteParams;
+  searchParams: RouteSearchParams;
+}) {
   return (
     <Suspense
       fallback={
@@ -207,7 +239,7 @@ export default function AdminAppDetailPage({ params }: { params: RouteParams }) 
         </div>
       }
     >
-      <AdminAppContent params={params} />
+      <AdminAppContent params={params} searchParams={searchParams} />
     </Suspense>
   );
 }

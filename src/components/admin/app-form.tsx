@@ -5,6 +5,7 @@ import { useState } from "react";
 import { HelpTip } from "./help-tip";
 import type { AdminAppData } from "./types";
 import { generateSlug } from "@/lib/slug";
+import { checkApkFile } from "@/lib/apk-file";
 import { errorMessageOf, inputClass, labelClass, primaryButtonClass } from "./ui";
 
 /** 表单内部状态 */
@@ -170,9 +171,18 @@ export function AppForm({
    */
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
-    setSaving(true);
     setError(null);
     setNotice(null);
+
+    // 先校验安装包完整性，避免上传几十 MB 后才在服务端解析失败
+    if (mode === "create" && apkFile && form.type === "ANDROID") {
+      const invalid = await checkApkFile(apkFile);
+      if (invalid) {
+        setError(invalid);
+        return;
+      }
+    }
+    setSaving(true);
 
     const payload: Record<string, unknown> = {
       slug: form.slug.trim() || generateSlug(form.name),
@@ -229,11 +239,22 @@ export function AppForm({
       }
 
       if (mode === "create") {
-        const id =
-          result.data && typeof result.data === "object" && "id" in result.data
-            ? String(result.data.id)
-            : "";
-        router.push(id ? `${afterCreateBase}/${id}` : afterCreateBase);
+        const created =
+          result.data && typeof result.data === "object"
+            ? (result.data as {
+                id?: unknown;
+                release?: { versionName?: string; versionCode?: number };
+              })
+            : null;
+        const id = created?.id ? String(created.id) : "";
+        // 带上创建标记与首个版本号，详情页据此展示创建成功提示
+        const params = new URLSearchParams({ created: "1" });
+        const versionName = created?.release?.versionName;
+        const versionCode = created?.release?.versionCode;
+        if (versionName) {
+          params.set("version", versionCode ? `${versionName}（${versionCode}）` : versionName);
+        }
+        router.push(id ? `${afterCreateBase}/${id}?${params.toString()}` : afterCreateBase);
         return;
       }
 

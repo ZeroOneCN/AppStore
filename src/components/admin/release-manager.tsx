@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { DownloadButton } from "@/components/download-button";
+import { checkApkFile } from "@/lib/apk-file";
 import { formatBytes, formatDateTime } from "@/lib/format";
 import { HelpTip } from "./help-tip";
 import type { AdminReleaseData } from "./types";
@@ -66,12 +67,17 @@ export function ReleaseManager({
   const [acting, setActing] = useState<string | null>(null);
 
   /**
-   * 以二进制流上传 APK 并展示实时进度。
+   * 以二进制流上传 APK 并展示实时进度；上传前先校验文件完整性。
    * @returns 无
    */
-  function handleUpload(): void {
+  async function handleUpload(): Promise<void> {
     if (!file) {
       setError("请先选择 APK 文件");
+      return;
+    }
+    const invalid = await checkApkFile(file);
+    if (invalid) {
+      setError(invalid);
       return;
     }
     setUploading(true);
@@ -249,7 +255,7 @@ export function ReleaseManager({
             </div>
           ) : null}
 
-          <button type="button" onClick={handleUpload} disabled={uploading} className={`${primaryButtonClass} mt-3`}>
+          <button type="button" onClick={() => void handleUpload()} disabled={uploading} className={`${primaryButtonClass} mt-3`}>
             {uploading ? "上传中…" : "上传并解析"}
           </button>
         </div>

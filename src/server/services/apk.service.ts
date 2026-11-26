@@ -318,9 +318,12 @@ export async function parseApk(filePath: string): Promise<ParsedApk> {
     const parser = new AppInfoParser(filePath);
     info = await parser.parse();
   } catch (error) {
+    // 附带已接收大小，便于判断是否上传中断导致文件不完整
+    const size = await fs.stat(filePath).then((stat) => stat.size).catch(() => 0);
+    const sizeHint = size > 0 ? `（已接收 ${(size / 1024 / 1024).toFixed(1)} MB）` : "";
     throw new AppError(
       "APK_PARSE_FAILED",
-      `APK 解析失败：${error instanceof Error ? error.message : "未知原因"}`,
+      `APK 解析失败：${error instanceof Error ? error.message : "未知原因"}${sizeHint}`,
     );
   }
 
