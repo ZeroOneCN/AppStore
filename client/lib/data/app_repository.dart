@@ -50,6 +50,22 @@ class AppRepository {
     return AppDetail.fromJson(data);
   }
 
+  /// 查询应用的全部已发布版本（含更新日志与包信息）。
+  Future<List<VersionSummary>> listReleases(String slug) async {
+    final data = await ApiClient.instance.getJson(
+      '/api/public/apps/$slug/releases',
+    );
+    if (data is! Map<String, dynamic>) {
+      throw const ApiException('版本列表返回格式异常');
+    }
+    final items = data['items'];
+    if (items is! List) return const [];
+    return items
+        .whereType<Map<String, dynamic>>()
+        .map(VersionSummary.fromJson)
+        .toList(growable: false);
+  }
+
   /// 获取某个版本的签名下载地址。
   ///
   /// 返回的地址可能是服务端的绝对地址，下载前需经 AppConfig.resolve 重写主机。

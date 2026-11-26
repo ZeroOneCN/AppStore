@@ -4,6 +4,10 @@ class VersionSummary {
   const VersionSummary({
     required this.versionName,
     required this.versionCode,
+    required this.changelog,
+    required this.fileSize,
+    required this.sha256,
+    this.minSdk,
     this.publishedAt,
   });
 
@@ -12,6 +16,10 @@ class VersionSummary {
     return VersionSummary(
       versionName: json['versionName'] as String? ?? '',
       versionCode: (json['versionCode'] as num?)?.toInt() ?? 0,
+      changelog: json['changelog'] as String? ?? '',
+      fileSize: (json['fileSize'] as num?)?.toInt() ?? 0,
+      sha256: json['sha256'] as String? ?? '',
+      minSdk: (json['minSdk'] as num?)?.toInt(),
       publishedAt: json['publishedAt'] as String?,
     );
   }
@@ -21,6 +29,18 @@ class VersionSummary {
 
   /// 版本号（versionCode）。
   final int versionCode;
+
+  /// 该版本的更新日志。
+  final String changelog;
+
+  /// 安装包大小（字节）。
+  final int fileSize;
+
+  /// 安装包 SHA-256。
+  final String sha256;
+
+  /// 最低 Android API。
+  final int? minSdk;
 
   /// 发布时间（ISO 字符串）。
   final String? publishedAt;

@@ -60,6 +60,10 @@ export interface AppDetailDto extends AppCardDto {
     versionName: string;
     versionCode: number;
     status: string;
+    changelog: string;
+    fileSize: number;
+    sha256: string;
+    minSdk: number | null;
     publishedAt: string | null;
   }[];
 }
@@ -314,6 +318,10 @@ export async function getAppBySlug(slug: string, includePrivate = false): Promis
       versionName: release.versionName,
       versionCode: release.versionCode,
       status: release.status,
+      changelog: release.changelog,
+      fileSize: release.fileSize,
+      sha256: release.sha256,
+      minSdk: release.minSdk,
       publishedAt: release.publishedAt?.toISOString() ?? null,
     })),
   };

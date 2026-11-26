@@ -27,6 +27,7 @@ class AppDetailPage extends StatefulWidget {
 
 class _AppDetailPageState extends State<AppDetailPage> {
   AppDetail? _detail;
+  List<VersionSummary> _releases = const [];
   bool _loading = true;
   String? _error;
 
@@ -44,9 +45,18 @@ class _AppDetailPageState extends State<AppDetailPage> {
     });
     try {
       final detail = await AppRepository.instance.getApp(widget.slug);
+      var releases = detail.releases;
+      try {
+        // 版本列表接口包含每个版本的更新日志与包信息，失败时回退到详情内置列表
+        final full = await AppRepository.instance.listReleases(widget.slug);
+        if (full.isNotEmpty) releases = full;
+      } catch (_) {
+        // 忽略版本列表加载失败，详情页仍可正常使用
+      }
       if (!mounted) return;
       setState(() {
         _detail = detail;
+        _releases = releases;
         _loading = false;
       });
     } on ApiException catch (error) {
@@ -114,6 +124,159 @@ class _AppDetailPageState extends State<AppDetailPage> {
           ),
         ),
       ),
+    );
+  }
+
+  /// 展示指定历史版本的更新日志、包信息、截图与校验值。
+  void _showVersionDetail(AppDetail detail, VersionSummary item) {
+    final theme = Theme.of(context);
+    final isCurrent = detail.currentRelease?.versionCode == item.versionCode;
+    final meta = <String>[
+      '发布于 ${formatDateTime(item.publishedAt)}',
+      if (item.fileSize > 0) formatBytes(item.fileSize),
+      if (item.minSdk != null) '最低 Android API ${item.minSdk}',
+    ];
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      backgroundColor: theme.colorScheme.surface,
+      builder: (sheetContext) {
+        return SafeArea(
+          top: false,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.sizeOf(sheetContext).height * 0.85,
+            ),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Text(
+                        'v${item.versionName}',
+                        style: theme.textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        '（${item.versionCode}）',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      if (isCurrent) ...[
+                        const SizedBox(width: 8),
+                        _Badge(text: '当前版本', color: theme.colorScheme.primary),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    meta.join(' · '),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  if (detail.screenshots.isNotEmpty) ...[
+                    const SizedBox(height: 18),
+                    Text(
+                      '应用截图',
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      height: 190,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: detail.screenshots.length,
+                        separatorBuilder: (context, index) =>
+                            const SizedBox(width: 8),
+                        itemBuilder: (context, index) {
+                          final url = AppConfig.instance
+                              .resolve(detail.screenshots[index])
+                              .toString();
+                          return GestureDetector(
+                            onTap: () =>
+                                _showScreenshot(detail.screenshots, index),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Image.network(
+                                url,
+                                width: 104,
+                                height: 190,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) =>
+                                    Container(
+                                      width: 104,
+                                      alignment: Alignment.center,
+                                      color: theme
+                                          .colorScheme.surfaceContainerHighest,
+                                      child: const Icon(
+                                        Icons.broken_image_outlined,
+                                      ),
+                                    ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 18),
+                  Text(
+                    '更新日志',
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    item.changelog.isEmpty ? '该版本未填写更新日志' : item.changelog,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      height: 1.6,
+                      color: item.changelog.isEmpty
+                          ? theme.colorScheme.outline
+                          : null,
+                    ),
+                  ),
+                  if (item.sha256.isNotEmpty) ...[
+                    const SizedBox(height: 18),
+                    Text(
+                      'SHA-256',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: theme.colorScheme.outline,
+                      ),
+                    ),
+                    SelectableText(
+                      item.sha256,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        fontFamily: 'monospace',
+                        color: theme.colorScheme.outline,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.tonal(
+                      onPressed: () => Navigator.of(sheetContext).pop(),
+                      child: const Text('关闭'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -265,30 +428,50 @@ class _AppDetailPageState extends State<AppDetailPage> {
               ),
             ),
           ],
-          if (detail.releases.length > 1) ...[
+          if (_releases.length > 1) ...[
             const SizedBox(height: 20),
             _Section(
               title: '历史版本',
               child: Column(
                 children: [
-                  for (final item in detail.releases)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 6),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              'v${item.versionName}（${item.versionCode}）',
-                              style: theme.textTheme.bodyMedium,
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      '点击任意版本查看更新日志、截图与包信息',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.outline,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  for (final item in _releases)
+                    InkWell(
+                      onTap: () => _showVersionDetail(detail, item),
+                      borderRadius: BorderRadius.circular(10),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 9),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                'v${item.versionName}（${item.versionCode}）',
+                                style: theme.textTheme.bodyMedium,
+                              ),
                             ),
-                          ),
-                          Text(
-                            formatDateTime(item.publishedAt),
-                            style: theme.textTheme.bodySmall?.copyWith(
+                            Text(
+                              formatDateTime(item.publishedAt),
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.outline,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Icon(
+                              Icons.chevron_right_rounded,
+                              size: 18,
                               color: theme.colorScheme.outline,
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                 ],
