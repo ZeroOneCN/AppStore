@@ -6,6 +6,7 @@ import type { Metadata } from "next";
 import { AppIcon } from "@/components/app-card";
 import { DownloadButton } from "@/components/download-button";
 import { ScreenshotGallery } from "@/components/screenshot-gallery";
+import { VersionHistory } from "@/components/version-history";
 import { formatBytes, formatDateTime } from "@/lib/format";
 import { isAppError } from "@/server/infra/errors";
 import { getAppBySlug, type AppDetailDto } from "@/server/services/app.service";
@@ -165,30 +166,13 @@ async function AppDetailContent({ params }: { params: RouteParams }) {
           {app.type === "ANDROID" && app.releases.length > 0 ? (
             <section className="surface p-6">
               <h2 className="text-sm font-semibold">历史版本</h2>
-              <ul className="mt-2 divide-y divide-black/[0.05] text-sm dark:divide-white/[0.08]">
-                {app.releases.map((item) => (
-                  <li key={item.id} className="flex items-center justify-between gap-3 py-3">
-                    <span className="min-w-0 truncate">
-                      <span className="font-medium">v{item.versionName}</span>
-                      <span className="ml-2 text-xs text-neutral-400">（{item.versionCode}）</span>
-                      {item.status === "ARCHIVED" ? (
-                        <span className="chip ml-2">已归档</span>
-                      ) : null}
-                    </span>
-                    <span className="flex shrink-0 items-center gap-3">
-                      <span className="hidden text-xs text-neutral-500 sm:inline dark:text-neutral-400">
-                        {formatDateTime(item.publishedAt)}
-                      </span>
-                      <DownloadButton
-                        releaseId={item.id}
-                        label="下载"
-                        variant="ghost"
-                        ariaLabel={`下载 v${item.versionName}`}
-                      />
-                    </span>
-                  </li>
-                ))}
-              </ul>
+              <p className="mt-1 text-[11px] text-neutral-400">点击任意版本查看更新日志、截图与包信息</p>
+              <VersionHistory
+                slug={app.slug}
+                versions={app.releases}
+                currentVersionCode={release?.versionCode}
+                screenshots={app.screenshots}
+              />
             </section>
           ) : null}
         </div>
