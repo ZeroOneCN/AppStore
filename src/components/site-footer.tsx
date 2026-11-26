@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { BrandLogo } from "@/components/brand-logo";
+import { getSiteSettings } from "@/server/services/settings.service";
 
 /** 页脚链接分组 */
 const GROUPS = [
@@ -25,8 +26,8 @@ const GROUPS = [
  * 前台页脚：品牌说明与链接分组。
  * @returns 页脚结构
  */
-export function SiteFooter() {
-  const siteName = process.env.NEXT_PUBLIC_SITE_NAME ?? "应用仓库";
+export async function SiteFooter() {
+  const { siteName } = await getSiteSettings();
 
   return (
     <footer className="mt-16 border-t border-black/[0.06] py-10 dark:border-white/10">

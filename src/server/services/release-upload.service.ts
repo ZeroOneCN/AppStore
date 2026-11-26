@@ -2,7 +2,6 @@ import type { App, Release } from "@prisma/client";
 import fs from "node:fs/promises";
 import { Readable } from "node:stream";
 import { prisma } from "../db";
-import { getEnv } from "../infra/env";
 import { AppError } from "../infra/errors";
 import { logger } from "../infra/logger";
 import { assertZipMagic, parseApk, streamApkToTemp } from "./apk.service";
@@ -13,6 +12,7 @@ import {
   isReleaseFileReferenced,
   publish,
 } from "./release.service";
+import { getSiteSettings } from "./settings.service";
 import { moveApkToFinal, removeStoredFile, saveIcon } from "./storage.service";
 
 /** 上传 APK 并创建版本的输入 */
@@ -54,7 +54,8 @@ export async function uploadApkRelease(input: UploadReleaseInput): Promise<Uploa
     throw new AppError("VALIDATION_FAILED", "网页作品不支持上传安装包");
   }
 
-  const maxBytes = getEnv().MAX_APK_MB * 1024 * 1024;
+  const { maxApkMb } = await getSiteSettings();
+  const maxBytes = maxApkMb * 1024 * 1024;
   let tempPath: string | null = null;
   let storedPath: string | null = null;
   let createdRelease: Release | null = null;

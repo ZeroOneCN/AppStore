@@ -1,5 +1,6 @@
 import { headers } from "next/headers";
 import { getEnv } from "../infra/env";
+import { getSiteSettings } from "../services/settings.service";
 
 /**
  * 归一化来源地址，去掉末尾斜杠。
@@ -42,7 +43,14 @@ export async function getRequestOrigin(): Promise<string> {
       return normalizeOrigin(`${proto}://${host}`);
     }
   } catch {
-    // 无请求上下文，走环境变量兜底
+    // 无请求上下文，走后台配置或环境变量兜底
+  }
+
+  try {
+    const settings = await getSiteSettings();
+    if (settings.baseUrl) return normalizeOrigin(settings.baseUrl);
+  } catch {
+    // 数据库尚未初始化时忽略
   }
   return normalizeOrigin(getEnv().BASE_URL);
 }

@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { BrandLogo } from "@/components/brand-logo";
 import { SiteNav } from "@/components/site-nav";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { getSession } from "@/server/http/session";
+import { getSiteSettings } from "@/server/services/settings.service";
 
 /**
  * 前台顶部导航：品牌、主导航、外观切换与登录入口。
@@ -10,7 +10,7 @@ import { getSession } from "@/server/http/session";
  */
 export async function SiteHeader() {
   const session = await getSession();
-  const siteName = process.env.NEXT_PUBLIC_SITE_NAME ?? "应用仓库";
+  const { siteName } = await getSiteSettings();
 
   const consoleHref = session
     ? session.role === "admin"
@@ -31,7 +31,6 @@ export async function SiteHeader() {
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
-          <ThemeToggle />
           <Link href={consoleHref} className="btn-primary px-4 py-2 text-[13px]">
             {consoleLabel}
           </Link>

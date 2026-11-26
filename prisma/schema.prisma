@@ -112,3 +112,16 @@ model AuditLog {
 
   @@index([createdAt])
 }
+
+/// 站点运行配置（单行记录，id 固定为 1）
+model SiteSetting {
+  id        Int      @id @default(1)
+  /// 前台与后台展示的站点名称
+  siteName  String   @default("应用仓库")
+  /// 单个 APK 上传上限（MB）
+  maxApkMb  Int      @default(200)
+  /// 站点兜底根地址（无请求上下文时使用）
+  baseUrl   String   @default("")
+  updatedAt DateTime @updatedAt
+}
+

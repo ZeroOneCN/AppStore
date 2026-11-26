@@ -26,16 +26,10 @@ export const viewport: Viewport = {
   ],
 };
 
-/** 首屏前应用外观偏好，避免深色模式闪白 */
-const THEME_SCRIPT = `(function(){try{var t=localStorage.getItem("theme")||"system";var d=t==="dark"||(t==="system"&&window.matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.classList.toggle("dark",d);}catch(e){}})();`;
-
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="zh-CN" className="h-full antialiased" suppressHydrationWarning>
-      <body className="min-h-full flex flex-col">
-        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
-        {children}
-      </body>
+    <html lang="zh-CN" className="h-full antialiased">
+      <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );
 }

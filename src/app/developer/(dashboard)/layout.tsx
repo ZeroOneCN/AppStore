@@ -20,7 +20,7 @@ const NAV_ITEMS: ConsoleNavItem[] = [
     icon: "M4 5h16v14H4V5Zm8 3v8m-4-4h8",
   },
   {
-    href: "/docs",
+    href: "/developer/docs",
     label: "接入文档",
     group: "资源",
     icon: "M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3V4Zm4 4h7M9 12h7",

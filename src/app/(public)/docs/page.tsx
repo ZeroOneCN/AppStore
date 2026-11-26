@@ -237,9 +237,10 @@ if (result is { HasUpdate: true, Latest: not null })
 
 /**
  * 文档数据区。
+ * @param props.embedded 是否内嵌到开发者后台（不显示独立页头与目录）
  * @returns 文档内容
  */
-async function DocsContent() {
+async function DocsContent({ embedded = false }: { embedded?: boolean }) {
   await connection();
 
   const base = await getRequestOrigin();
@@ -247,8 +248,15 @@ async function DocsContent() {
   const checkUrl = `${base}/api/update/check`;
 
   return (
-    <div className="page-shell grid flex-1 gap-10 py-10 lg:grid-cols-[220px_minmax(0,1fr)]">
-      <aside className="hidden lg:block">
+    <div
+      className={
+        embedded
+          ? "min-w-0"
+          : "page-shell grid flex-1 gap-10 py-10 lg:grid-cols-[220px_minmax(0,1fr)]"
+      }
+    >
+      {embedded ? null : (
+        <aside className="hidden lg:block">
         <div className="sticky top-24">
           <p className="text-[11px] font-medium tracking-[0.18em] text-neutral-400 uppercase">目录</p>
           <nav className="mt-3 space-y-1" aria-label="文档目录">
@@ -266,19 +274,22 @@ async function DocsContent() {
             浏览应用
           </Link>
         </div>
-      </aside>
+        </aside>
+      )}
 
       <div className="min-w-0 space-y-5">
-        <header>
-          <p className="text-[11px] font-medium tracking-[0.18em] text-brand uppercase">开发者文档</p>
-          <h1 className="mt-2 text-[32px] leading-tight font-semibold tracking-[-0.03em] sm:text-[40px]">
-            接入更新检查
-          </h1>
-          <p className="mt-3 max-w-2xl text-sm leading-7 text-neutral-600 dark:text-neutral-300">
-            在自己的应用内调用公开接口检查更新。接口无需登录，下载地址为带签名的临时链接；
-            本文覆盖接口参数、响应语义、主流语言示例与常见问题。
-          </p>
-        </header>
+        {embedded ? null : (
+          <header>
+            <p className="text-[11px] font-medium tracking-[0.18em] text-brand uppercase">开发者文档</p>
+            <h1 className="mt-2 text-[32px] leading-tight font-semibold tracking-[-0.03em] sm:text-[40px]">
+              接入更新检查
+            </h1>
+            <p className="mt-3 max-w-2xl text-sm leading-7 text-neutral-600">
+              在自己的应用内调用公开接口检查更新。接口无需登录，下载地址为带签名的临时链接；
+              本文覆盖接口参数、响应语义、主流语言示例与常见问题。
+            </p>
+          </header>
+        )}
 
         <section id="overview" className="surface scroll-mt-24 p-6 sm:p-8">
           <h2 className="text-lg font-semibold">概述</h2>
@@ -555,6 +566,18 @@ export default function DocsPage() {
   return (
     <Suspense fallback={<DocsSkeleton />}>
       <DocsContent />
+    </Suspense>
+  );
+}
+
+/**
+ * 内嵌版接入文档：供开发者后台直接展示，不新开标签页。
+ * @returns 文档内容
+ */
+export function DocsEmbedded() {
+  return (
+    <Suspense fallback={<DocsSkeleton />}>
+      <DocsContent embedded />
     </Suspense>
   );
 }

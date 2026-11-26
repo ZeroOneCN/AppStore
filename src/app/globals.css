@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* 深色模式改为 class 驱动，支持用户在界面上手动切换 */
+/* 站点仅提供浅色模式；历史 dark 变体保留但不再启用 */
 @custom-variant dark (&:where(.dark, .dark *));
 
 /* Apple 风格设计令牌：中性色沿用系统观感，品牌色统一为新 LOGO 的蓝色 */
@@ -60,6 +60,8 @@
 
 html {
   -webkit-text-size-adjust: 100%;
+  /* 仅提供浅色模式 */
+  color-scheme: light;
   /* 始终预留滚动条空间，切换后台标签页时页面不抖动 */
   scrollbar-gutter: stable;
   overflow-y: scroll;

@@ -27,6 +27,7 @@ export const AUDIT_ACTION_LABEL: Record<string, string> = {
   "admin.login": "登录后台",
   "admin.password": "修改密码",
   "logs.clear": "清空日志",
+  "settings.update": "更新站点设置",
   "app.create": "创建应用",
   "app.update": "更新应用",
   "app.delete": "删除应用",

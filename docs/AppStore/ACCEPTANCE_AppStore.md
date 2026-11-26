@@ -314,3 +314,14 @@ HTTP 冒烟实测明细（种子数据：`smoke-pack`，真实 APK 4026 版，�
 | 站点地址自动推导 | 通过 | 新增 `originFromRequest` / `getRequestOrigin`；`/docs`、首页接口预览、OpenAPI、robots、sitemap、更新检查下载链接均按请求头生成，实测 `Host=apps.example.com` + `X-Forwarded-Proto=https` 输出正确 |
 | 品牌与文案 | 通过 | 产品名统一为「应用仓库」，移除「私有部署」措辞，改为「数据存储在自建服务器上」 |
 | 验证 | 通过 | `typecheck`、`lint`、`test`（58/58）、`build` 全部通过；新增迁移 `20261126084617_add_audit_log_ip` 已应用 |
+
+### 细节优化（B17）
+
+| 项目 | 结果 | 证据 |
+|---|---|---|
+| 开发者内嵌文档 | 通过 | `/developer/docs` 不再跳转，直接复用 `DocsEmbedded` 在控制台内渲染；浏览器验证 URL 保持在开发者后台，语言标签可切换 |
+| 新建应用统一 | 通过 | 开发者新建页移除窄容器并复用分类/标签候选项；`展示设置` 区保留但禁用，显示「由管理员控制」；数据层补充 `requireDeveloperPage` |
+| 站点配置后台化 | 通过 | 新增 `SiteSetting` 模型与迁移 `20261126090045_add_site_settings`；`/api/admin/settings` 支持读写；站点名称、APK 上限、兜底地址改由数据库驱动，实测改名后首页与 manifest 即时生效 |
+| 移除 Docker | 通过 | 删除 `Dockerfile`、`.dockerignore` 与 `BUILD_STANDALONE` 条件输出；DEPLOY 改为普通 `npm run build && npm start` |
+| 移除深浅色模式 | 通过 | 删除 `ThemeToggle`、首屏主题脚本，`html` 固定 `color-scheme: light`；浏览器验证页面无主题切换入口 |
+| 验证 | 通过 | `typecheck`、`lint`、`test`（58/58）、`build` 全部通过；开发者后台三项浏览器走查均通过 |

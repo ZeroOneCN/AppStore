@@ -5,6 +5,7 @@ import { AppCard } from "@/components/app-card";
 import { StatCard } from "@/components/stat-card";
 import { getRequestOrigin } from "@/server/http/base-url";
 import { listPublicApps } from "@/server/services/app.service";
+import { getSiteSettings } from "@/server/services/settings.service";
 
 /** 平台能力列表 */
 const CAPABILITIES = [
@@ -68,7 +69,7 @@ async function HomeContent() {
   const androidCount = apps.filter((app) => app.type === "ANDROID").length;
   const webCount = apps.length - androidCount;
   const downloads = apps.reduce((sum, app) => sum + app.downloadCount, 0);
-  const siteName = process.env.NEXT_PUBLIC_SITE_NAME ?? "应用仓库";
+  const { siteName } = await getSiteSettings();
   const origin = await getRequestOrigin();
   const checkEndpoint = `${origin}/api/update/check`;
 

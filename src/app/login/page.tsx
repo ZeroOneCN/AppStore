@@ -3,9 +3,9 @@ import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { BrandLogo } from "@/components/brand-logo";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { LoginForm } from "@/components/admin/login-form";
 import { getSession } from "@/server/http/session";
+import { getSiteSettings } from "@/server/services/settings.service";
 
 /** 登录页查询参数 */
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
@@ -36,7 +36,7 @@ async function LoginContent({ searchParams }: { searchParams: SearchParams }) {
   }
 
   const next = readNext(await searchParams);
-  const siteName = process.env.NEXT_PUBLIC_SITE_NAME ?? "应用仓库";
+  const { siteName } = await getSiteSettings();
 
   return (
     <div className="relative w-full max-w-[420px]">
@@ -59,11 +59,10 @@ async function LoginContent({ searchParams }: { searchParams: SearchParams }) {
           </p>
         </div>
 
-        <div className="mt-6 flex items-center justify-between text-xs text-neutral-500 dark:text-neutral-400">
+        <div className="mt-6 flex items-center justify-center text-xs text-neutral-500">
           <Link href="/" className="transition hover:text-brand">
             ← 返回首页
           </Link>
-          <ThemeToggle />
         </div>
       </div>
     </div>

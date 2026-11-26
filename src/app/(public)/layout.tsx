@@ -9,14 +9,16 @@ import { SiteHeader, SiteHeaderSkeleton } from "@/components/site-header";
  */
 export default function PublicLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-screen flex-col text-neutral-900 dark:text-neutral-50">
+    <div className="flex min-h-screen flex-col text-neutral-900">
       <Suspense fallback={<SiteHeaderSkeleton />}>
         <SiteHeader />
       </Suspense>
 
       <main className="flex flex-1 flex-col">{children}</main>
 
-      <SiteFooter />
+      <Suspense fallback={<div className="mt-16 h-48 border-t border-black/[0.06]" />}>
+        <SiteFooter />
+      </Suspense>
     </div>
   );
 }

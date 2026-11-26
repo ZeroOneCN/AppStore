@@ -1,13 +1,15 @@
 import type { MetadataRoute } from "next";
+import { getSiteSettings } from "@/server/services/settings.service";
 
 /**
  * PWA 清单：让站点可添加到主屏并保持独立窗口运行。
  * @returns Web App Manifest
  */
-export default function manifest(): MetadataRoute.Manifest {
+export default async function manifest(): Promise<MetadataRoute.Manifest> {
+  const { siteName } = await getSiteSettings();
   return {
-    name: "应用仓库",
-    short_name: "应用仓库",
+    name: siteName,
+    short_name: siteName,
     description: "应用与网页作品的集中分发中心",
     start_url: "/",
     display: "standalone",

@@ -44,6 +44,7 @@ export function AppForm({
   afterCreateBase = "/admin/apps",
   showAdminFields = true,
   developerOptions = [],
+  developerLabel = "当前开发者账号",
 }: {
   mode: "create" | "edit";
   app?: AdminAppData;
@@ -53,6 +54,7 @@ export function AppForm({
   afterCreateBase?: string;
   showAdminFields?: boolean;
   developerOptions?: { id: string; username: string; displayName: string }[];
+  developerLabel?: string;
 }) {
   const router = useRouter();
   const [form, setForm] = useState<FormState>({
@@ -376,61 +378,71 @@ export function AppForm({
         )}
       </section>
 
-      {showAdminFields ? (
-        <section className="rounded-2xl border border-neutral-200 bg-white p-5 dark:border-neutral-800 dark:bg-neutral-900">
-          <h2 className="mb-4 text-sm font-semibold">展示设置</h2>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label htmlFor="visibility" className={labelClass}>
-                可见性
-                <HelpTip text="私有应用不会出现在公开应用墙，图标与截图也需要管理员登录才能访问。" />
-              </label>
-              <select
-                id="visibility"
-                value={form.visibility}
-                onChange={(event) => update("visibility", event.target.value as FormState["visibility"])}
-                className={inputClass}
-              >
-                <option value="PUBLIC">公开</option>
-                <option value="PRIVATE">私有（仅管理员可见）</option>
-              </select>
-            </div>
-
-            <div>
-              <label htmlFor="developerId" className={labelClass}>
-                归属开发者
-                <HelpTip text="指派后该开发者可在开发者门户管理此应用及其版本；留空表示由管理员直接管理。" />
-              </label>
-              <select
-                id="developerId"
-                value={form.developerId}
-                onChange={(event) => update("developerId", event.target.value)}
-                className={inputClass}
-              >
-                <option value="">未指派（管理员管理）</option>
-                {developerOptions.map((developer) => (
-                  <option key={developer.id} value={developer.id}>
-                    {developer.displayName
-                      ? `${developer.displayName}（${developer.username}）`
-                      : developer.username}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <label className="flex items-center gap-2.5 self-end rounded-xl border border-neutral-200 px-3.5 py-2.5 text-sm dark:border-neutral-700">
-              <input
-                type="checkbox"
-                checked={form.pinned}
-                onChange={(event) => update("pinned", event.target.checked)}
-                className="h-4 w-4 rounded border-neutral-300 text-indigo-600 focus:ring-indigo-500"
-              />
-              置顶展示
-              <HelpTip text="置顶应用会在应用墙与后台列表顶部优先展示。" />
+      <section className="surface p-5">
+        <div className="mb-4 flex items-center gap-2">
+          <h2 className="text-sm font-semibold">展示设置</h2>
+          {showAdminFields ? null : <span className="chip">由管理员控制</span>}
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label htmlFor="visibility" className={labelClass}>
+              可见性
+              <HelpTip text="私有应用不会出现在公开应用墙，图标与截图也需要管理员登录才能访问。" />
             </label>
+            <select
+              id="visibility"
+              value={form.visibility}
+              disabled={!showAdminFields}
+              onChange={(event) => update("visibility", event.target.value as FormState["visibility"])}
+              className={inputClass}
+            >
+              <option value="PUBLIC">公开</option>
+              <option value="PRIVATE">私有（仅管理员可见）</option>
+            </select>
           </div>
-        </section>
-      ) : null}
+
+          <div>
+            <label htmlFor="developerId" className={labelClass}>
+              归属开发者
+              <HelpTip text="指派后该开发者可在开发者门户管理此应用及其版本；留空表示由管理员直接管理。" />
+            </label>
+            <select
+              id="developerId"
+              value={form.developerId}
+              disabled={!showAdminFields}
+              onChange={(event) => update("developerId", event.target.value)}
+              className={inputClass}
+            >
+              {showAdminFields ? (
+                <>
+                  <option value="">未指派（管理员管理）</option>
+                  {developerOptions.map((developer) => (
+                    <option key={developer.id} value={developer.id}>
+                      {developer.displayName
+                        ? `${developer.displayName}（${developer.username}）`
+                        : developer.username}
+                    </option>
+                  ))}
+                </>
+              ) : (
+                <option value="">{developerLabel}</option>
+              )}
+            </select>
+          </div>
+
+          <label className="flex items-center gap-2.5 self-end rounded-xl border border-black/10 px-3.5 py-2.5 text-sm dark:border-white/12">
+            <input
+              type="checkbox"
+              checked={form.pinned}
+              disabled={!showAdminFields}
+              onChange={(event) => update("pinned", event.target.checked)}
+              className="h-4 w-4 rounded border-neutral-300 text-brand focus:ring-brand/30"
+            />
+            置顶展示
+            <HelpTip text="置顶应用会在应用墙与后台列表顶部优先展示。" />
+          </label>
+        </div>
+      </section>
 
       {error ? (
         <p role="alert" className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:bg-rose-500/10 dark:text-rose-300">

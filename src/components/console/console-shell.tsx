@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { BrandLogo } from "@/components/brand-logo";
 import { LogoutButton } from "@/components/admin/logout-button";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { ConsoleNav, type ConsoleNavItem } from "@/components/console/console-nav";
 
 /**
@@ -78,7 +77,6 @@ export function ConsoleShell({
               <span className="truncate text-[14px] font-semibold tracking-tight">{consoleName}</span>
             </Link>
             <div className="flex shrink-0 items-center gap-1.5">
-              <ThemeToggle />
               <LogoutButton className="btn-secondary min-h-8 px-2.5 py-1.5 text-xs" />
             </div>
           </div>

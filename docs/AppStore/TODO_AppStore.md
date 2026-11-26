@@ -16,7 +16,8 @@
 | 项 | 说明 |
 |---|---|
 | `.env` 生产值 | 确认 `BASE_URL` 为设备可达地址（HTTPS 时 Cookie 自动启用 Secure）；`DOWNLOAD_SIGN_SECRET`、`SESSION_SECRET` 为独立随机值；初始化后删除 `ADMIN_PASSWORD` |
-| 云服务器/容器 | 已提供 `Dockerfile` 与 `output: "standalone"`；部署时把 `data/`、`storage/` 挂载为持久化卷，反向代理放行大请求体并透传 `X-Forwarded-For` |
+| 云服务器 | 运行 `npm run build` 后执行 `npm start`；`data/`、`storage/` 需持久化，反向代理放行大请求体并透传 `X-Forwarded-For` |
+| 站点配置 | 站点名称、上传上限、兜底地址在「后台 → 设置」中修改，保存在数据库；敏感密钥仍由 `.env` 管理 |
 | HTTPS | 内网试用允许 HTTP；对外提供服务前按 DEPLOY 第 9 节接入反向代理并改 `BASE_URL` |
 | 防火墙 | 放行 TCP 3000；反向代理场景仅本机监听并放行 443 |
 | 备份 | `data/`、`storage/`、`.env` 需定期备份；当前未配置自动备份任务 |
@@ -48,5 +49,5 @@
 | 接口冒烟 | `node scripts/api-smoke.mjs http://localhost:3000` |
 | 后台冒烟 | `node scripts/admin-smoke.mjs http://localhost:3000` |
 | 查看服务日志 | 运行 `npm start` 的终端输出 |
-| 容器构建 | `docker build -t appstore:latest .`；运行参数见 DEPLOY 第 5.1 节 |
+| 站点设置 | 登录后台 → 设置，可修改站点名称、单个 APK 上传上限与兜底地址 |
 | 统一登录 | 管理员与开发者均从 `/login` 登录，按账号角色进入对应控制台 |

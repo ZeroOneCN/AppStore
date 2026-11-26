@@ -42,8 +42,8 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 | `DOWNLOAD_SIGN_SECRET` | 是 | 下载链接 HMAC 密钥，32 字节随机十六进制 |
 | `SESSION_SECRET` | 是 | 统一会话签名密钥，管理员与开发者共用同一登录入口，角色由令牌载荷区分；32 字节随机十六进制 |
 | `ADMIN_USERNAME` / `ADMIN_PASSWORD` | 初始化时 | 仅 `npm run init-admin` 读取，初始化后可删除 `ADMIN_PASSWORD` 并重启 |
-| `MAX_APK_MB` | 否 | 单次上传上限，默认 200 |
-| `NEXT_PUBLIC_SITE_NAME` | 否 | 前台站点标题 |
+| `MAX_APK_MB` | 否 | 首次启动时的上传上限默认值，之后可在「后台 → 设置」中修改 |
+| `NEXT_PUBLIC_SITE_NAME` | 否 | 首次启动时的站点名称默认值，之后可在「后台 → 设置」中修改 |
 
 > 密钥只写入 `.env`，不要提交到 Git；`data/`、`storage/` 已被忽略。
 
@@ -71,15 +71,6 @@ npm run build
 npm start
 ```
 
-`next.config.ts` 在容器构建时（`BUILD_STANDALONE=1`）输出 `.next/standalone`，可直接：
-
-```bash
-BUILD_STANDALONE=1 npm run build
-node .next/standalone/server.js
-```
-
-（使用 standalone 运行时，需把 `public/` 与 `.next/static/` 复制到对应位置；Next 16 的 `next start` 不兼容 standalone，因此普通服务器部署请保持默认构建并执行 `npm start`。）
-
 默认监听 `3000` 端口并允许局域网访问（启动日志会打印 Network 地址）。首次访问：
 
 - 宣传首页：`http://<主机IP>:3000/`
@@ -87,47 +78,12 @@ node .next/standalone/server.js
 - 接入文档：`http://<主机IP>:3000/docs`
 - 统一登录：`http://<主机IP>:3000/login`（管理员与开发者共用，登录后按角色进入对应控制台）
 
-## 5.1 使用 Docker 部署
-
-仓库内置多阶段 `Dockerfile` 与 `.dockerignore`。SQLite 数据库与上传文件必须放在容器外的数据卷中：
-
-```bash
-# 1. 准备数据目录（首次）
-mkdir -p data storage
-
-# 2. 在宿主机执行数据库迁移（使用仓库依赖，避免镜像内安装 Prisma CLI）
-npx prisma migrate deploy
-
-# 3. 构建镜像
-docker build -t appstore:latest .
-
-# 4. 运行容器
-docker run -d --name appstore \
-  -p 3000:3000 \
-  -v "$PWD/data:/app/data" \
-  -v "$PWD/storage:/app/storage" \
-  -e BASE_URL=https://store.example.com \
-  -e DATABASE_URL="file:/app/data/appstore.db" \
-  -e STORAGE_DIR=/app/storage \
-  -e DOWNLOAD_SIGN_SECRET=<32 字节随机串> \
-  -e SESSION_SECRET=<32 字节随机串> \
-  -e NEXT_PUBLIC_SITE_NAME=应用仓库 \
-  appstore:latest
-```
-
-说明：
-
-- `DATABASE_URL` 在容器内使用绝对路径 `/app/data/appstore.db`，与挂载卷对应。
-- 升级时先备份 `data/` 与 `storage/`，重新 `docker build` 后替换容器即可。
-- 初次 `init-admin` 可在宿主机执行：`npm run init-admin`，读写同一份数据库。
-- 反向代理需放行较大的请求体（APK 上传），并保留 `X-Forwarded-For` 以便登录限流正确识别来源。
-
 ## 6. 内网访问与防火墙
 
-1. 确认 `BASE_URL` 使用设备可访问的地址（不要用 `localhost`，否则客户端拿到的下载链接指向手机自身）。
+1. 站点根地址会自动跟随访问域名；无请求上下文时使用「后台 → 设置」中的兜底地址或 `.env` 的 `BASE_URL`。
 2. 放行 TCP 3000（Windows 防火墙或路由器策略）。
-3. Android 客户端「设置」页填写同一地址并点「测试连接」。
-4. 客户端允许明文 HTTP；如后续切换 HTTPS，把基地址改为 `https://` 即可，无需改代码。
+3. Android 客户端「设置」页填写实际访问地址并点「测试连接」。
+4. 客户端允许明文 HTTP；如后续切换 HTTPS，把访问地址改为 `https://` 即可，无需改代码。
 
 ## 7. 首次发版流程
 

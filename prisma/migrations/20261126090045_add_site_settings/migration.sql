@@ -1,0 +1,8 @@
+-- CreateTable
+CREATE TABLE "SiteSetting" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT DEFAULT 1,
+    "siteName" TEXT NOT NULL DEFAULT '应用仓库',
+    "maxApkMb" INTEGER NOT NULL DEFAULT 200,
+    "baseUrl" TEXT NOT NULL DEFAULT '',
+    "updatedAt" DATETIME NOT NULL
+);
