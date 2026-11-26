@@ -60,7 +60,7 @@ export function AppCard({ app }: { app: AppCardDto }) {
   return (
     <Link
       href={`/apps/${app.slug}`}
-      className="group flex flex-col gap-3 rounded-[22px] border border-black/[0.06] bg-white/85 p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)] backdrop-blur-sm transition duration-300 hover:-translate-y-0.5 hover:border-brand/30 hover:shadow-[0_18px_40px_-28px_rgba(30,81,238,0.65)] dark:border-white/10 dark:bg-[#1c1c1e]/85 dark:hover:border-brand/40"
+      className="group flex h-full flex-col gap-3 rounded-[22px] border border-black/[0.06] bg-white/85 p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)] backdrop-blur-sm transition duration-300 hover:-translate-y-0.5 hover:border-brand/30 hover:shadow-[0_18px_40px_-28px_rgba(30,81,238,0.65)] dark:border-white/10 dark:bg-[#1c1c1e]/85 dark:hover:border-brand/40"
     >
       <div className="flex items-start gap-3">
         <AppIcon name={app.name} iconUrl={app.iconUrl} />
@@ -73,7 +73,8 @@ export function AppCard({ app }: { app: AppCardDto }) {
               </span>
             ) : null}
           </div>
-          <p className="mt-1 line-clamp-2 text-[13px] leading-5 text-neutral-500 dark:text-neutral-400">
+          {/* 固定预留两行简介高度，保证不同卡片下方的标签与底栏对齐 */}
+          <p className="mt-1 line-clamp-2 min-h-[40px] text-[13px] leading-5 text-neutral-500 dark:text-neutral-400">
             {app.summary}
           </p>
         </div>
