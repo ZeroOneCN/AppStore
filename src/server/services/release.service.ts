@@ -16,6 +16,8 @@ export interface CreateDraftInput {
   filePath: string;
   fileSize: number;
   sha256: string;
+  /** 上传者标记：admin 或 dev:<username> */
+  uploadedBy?: string | null;
   changelog?: string;
   forceUpdate?: boolean;
   minSupportedVersionCode?: number | null;
@@ -77,6 +79,7 @@ export async function createDraft(input: CreateDraftInput): Promise<Release> {
       minSdk: input.minSdk,
       forceUpdate: input.forceUpdate ?? false,
       minSupportedVersionCode: input.minSupportedVersionCode ?? null,
+      uploadedBy: input.uploadedBy ?? null,
       status: "DRAFT",
       isCurrent: false,
     },
@@ -240,6 +243,20 @@ export async function listAllReleases(appId: string): Promise<Release[]> {
 export async function listPublishedReleases(appId: string, limit = 20): Promise<Release[]> {
   return prisma.release.findMany({
     where: { appId, status: "PUBLISHED" },
+    orderBy: { versionCode: "desc" },
+    take: limit,
+  });
+}
+
+/**
+ * 查询某应用公开可下载的版本（已发布 + 已归档），供详情页历史版本展示。
+ * @param appId 应用 ID
+ * @param limit 返回条数，默认 20
+ * @returns 版本记录数组（版本号倒序）
+ */
+export async function listDownloadableReleases(appId: string, limit = 20): Promise<Release[]> {
+  return prisma.release.findMany({
+    where: { appId, status: { in: ["PUBLISHED", "ARCHIVED"] } },
     orderBy: { versionCode: "desc" },
     take: limit,
   });

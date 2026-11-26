@@ -19,6 +19,21 @@ model AdminUser {
   createdAt    DateTime @default(now())
 }
 
+/// 开发者账号，由管理员创建，可管理归属自己的应用
+model Developer {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  displayName  String   @default("")
+  passwordHash String
+  /// ACTIVE | DISABLED
+  status       String   @default("ACTIVE")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  apps         App[]
+
+  @@index([status])
+}
+
 /// 应用档案：Android 应用或网页作品
 model App {
   id            String    @id @default(cuid())
@@ -36,6 +51,9 @@ model App {
   screenshots   String    @default("[]")
   webUrl        String?
   packageName   String?   @unique
+  /// 归属开发者，为空表示由管理员直接管理
+  developerId   String?
+  developer     Developer? @relation(fields: [developerId], references: [id], onDelete: SetNull)
   /// PUBLIC | PRIVATE
   visibility    String    @default("PUBLIC")
   pinned        Boolean   @default(false)
@@ -46,6 +64,7 @@ model App {
 
   @@index([type, visibility])
   @@index([category])
+  @@index([developerId])
 }
 
 /// Android 应用版本，一个应用同一时刻至多一条 isCurrent
@@ -63,6 +82,8 @@ model Release {
   minSdk                 Int?
   forceUpdate            Boolean   @default(false)
   minSupportedVersionCode Int?
+  /// 上传者标记：admin 或 dev:<username>
+  uploadedBy             String?
   /// DRAFT | PUBLISHED | ARCHIVED
   status                 String    @default("DRAFT")
   isCurrent              Boolean   @default(false)

@@ -127,13 +127,21 @@ async function AppDetailContent({ params }: { params: RouteParams }) {
               </h2>
               <ul className="mt-3 divide-y divide-black/[0.05] text-sm dark:divide-white/[0.08]">
                 {app.releases.map((item) => (
-                  <li key={`${item.versionCode}`} className="flex items-center justify-between gap-3 py-2.5">
-                    <span className="truncate">
+                  <li key={item.id} className="flex items-center justify-between gap-3 py-2.5">
+                    <span className="min-w-0 truncate">
                       v{item.versionName}
                       <span className="ml-2 text-xs text-neutral-400">({item.versionCode})</span>
+                      {item.status === "ARCHIVED" ? (
+                        <span className="ml-2 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
+                          已归档
+                        </span>
+                      ) : null}
                     </span>
-                    <span className="shrink-0 text-xs text-neutral-500 dark:text-neutral-400">
-                      {formatDateTime(item.publishedAt)}
+                    <span className="flex shrink-0 items-center gap-2">
+                      <span className="text-xs text-neutral-500 dark:text-neutral-400">
+                        {formatDateTime(item.publishedAt)}
+                      </span>
+                      <DownloadButton releaseId={item.id} label="下载" variant="ghost" />
                     </span>
                   </li>
                 ))}

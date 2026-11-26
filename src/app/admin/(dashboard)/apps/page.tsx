@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { AppIcon } from "@/components/app-card";
 import { formatDateTime } from "@/lib/format";
 import { listAdminApps } from "@/server/services/app.service";
+import { requireAdminPage } from "@/server/http/guards";
 
 /** 每页展示的应用数量 */
 const PAGE_SIZE = 12;
@@ -64,6 +65,7 @@ function buildHref(
  */
 async function AppsContent({ searchParams }: { searchParams: AdminAppsSearchParams }) {
   await connection();
+  await requireAdminPage();
   const raw = await searchParams;
   const apps = await listAdminApps();
 
@@ -232,6 +234,11 @@ async function AppsContent({ searchParams }: { searchParams: AdminAppsSearchPara
                   <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[11px] text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300">
                     {app.category}
                   </span>
+                  {app.developer ? (
+                    <span className="rounded-full bg-violet-50 px-2 py-0.5 text-[11px] text-violet-700 dark:bg-violet-500/15 dark:text-violet-300">
+                      {app.developer.displayName || app.developer.username}
+                    </span>
+                  ) : null}
                   {app.visibility === "PRIVATE" ? (
                     <span className="rounded-full bg-rose-50 px-2 py-0.5 text-[11px] font-medium text-rose-600 dark:bg-rose-500/15 dark:text-rose-300">
                       私有

@@ -23,6 +23,17 @@ export const AUDIT_ACTION_LABEL: Record<string, string> = {
   "release.set-current": "切换当前版本",
   "release.archive": "归档版本",
   "release.delete": "删除版本",
+  "developer.create": "创建开发者",
+  "developer.status": "调整开发者状态",
+  "developer.reset-password": "重置开发者密码",
+  "dev.login": "开发者登录",
+  "dev.password": "开发者修改密码",
+  "dev.app.create": "开发者创建应用",
+  "dev.app.update": "开发者更新应用",
+  "dev.release.upload": "开发者上传版本",
+  "dev.release.set-current": "开发者切换当前版本",
+  "dev.release.archive": "开发者归档版本",
+  "dev.release.delete": "开发者删除版本",
 };
 
 /**

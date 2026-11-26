@@ -12,9 +12,18 @@ const MAX_ICON_BYTES = 2 * 1024 * 1024;
  * 应用图标上传组件。
  * @param props.appId 应用 ID
  * @param props.iconUrl 当前图标地址
+ * @param props.apiBase 接口前缀，默认管理员接口
  * @returns 图标预览与上传控件
  */
-export function IconUploader({ appId, iconUrl }: { appId: string; iconUrl: string | null }) {
+export function IconUploader({
+  appId,
+  iconUrl,
+  apiBase = "/api/admin",
+}: {
+  appId: string;
+  iconUrl: string | null;
+  apiBase?: string;
+}) {
   const router = useRouter();
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -39,7 +48,7 @@ export function IconUploader({ appId, iconUrl }: { appId: string; iconUrl: strin
     const formData = new FormData();
     formData.append("file", file);
     try {
-      const response = await fetch(`/api/admin/apps/${appId}/icon`, {
+      const response = await fetch(`${apiBase}/apps/${appId}/icon`, {
         method: "POST",
         body: formData,
       });

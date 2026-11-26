@@ -7,16 +7,19 @@ import { useState } from "react";
  * @param props.releaseId 版本 ID
  * @param props.className 额外样式
  * @param props.label 按钮文案，默认「下载 APK」
+ * @param props.variant 视觉风格，primary 为主按钮，ghost 为列表内小按钮
  * @returns 下载按钮与错误提示
  */
 export function DownloadButton({
   releaseId,
   label = "下载 APK",
   className = "",
+  variant = "primary",
 }: {
   releaseId: string;
   label?: string;
   className?: string;
+  variant?: "primary" | "ghost";
 }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -71,13 +74,17 @@ export function DownloadButton({
         type="button"
         onClick={handleDownload}
         disabled={loading}
-        className={`btn-primary ${className}`}
+        className={`${
+          variant === "ghost"
+            ? "rounded-lg border border-neutral-200 px-2.5 py-1 text-xs transition hover:bg-neutral-100 disabled:opacity-60 dark:border-neutral-700 dark:hover:bg-neutral-800"
+            : "btn-primary"
+        } ${className}`}
       >
         <svg
           aria-hidden
           viewBox="0 0 20 20"
           fill="currentColor"
-          className="h-4 w-4"
+          className={variant === "ghost" ? "h-3.5 w-3.5" : "h-4 w-4"}
         >
           <path d="M10 2a1 1 0 0 1 1 1v7.586l2.293-2.293a1 1 0 1 1 1.414 1.414l-4 4a1 1 0 0 1-1.414 0l-4-4a1 1 0 1 1 1.414-1.414L9 10.586V3a1 1 0 0 1 1-1Z" />
           <path d="M3 14a1 1 0 0 1 1 1v1h12v-1a1 1 0 1 1 2 0v2a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-2a1 1 0 0 1 1-1Z" />

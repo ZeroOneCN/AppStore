@@ -13,6 +13,8 @@ const baseAppSchema = z.object({
   packageName: z.string().trim().max(128).nullable().optional(),
   visibility: z.enum(["PUBLIC", "PRIVATE"]).optional(),
   pinned: z.boolean().optional(),
+  /** 归属开发者 ID，null 表示改回管理员直接管理 */
+  developerId: z.string().trim().min(1).max(64).nullable().optional(),
 });
 
 /** 创建应用请求体 */

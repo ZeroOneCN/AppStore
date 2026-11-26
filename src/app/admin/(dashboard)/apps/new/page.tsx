@@ -3,6 +3,8 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 import { AppForm } from "@/components/admin/app-form";
 import { listAdminFacets } from "@/server/services/app.service";
+import { listDevelopers } from "@/server/services/developer.service";
+import { requireAdminPage } from "@/server/http/guards";
 
 /**
  * 新建应用表单数据区。
@@ -10,7 +12,8 @@ import { listAdminFacets } from "@/server/services/app.service";
  */
 async function NewAppContent() {
   await connection();
-  const facets = await listAdminFacets();
+  await requireAdminPage();
+  const [facets, developers] = await Promise.all([listAdminFacets(), listDevelopers()]);
 
   return (
     <div className="w-full">
@@ -26,7 +29,16 @@ async function NewAppContent() {
           先填写基础信息，创建后即可上传 APK、图标与截图
         </p>
       </div>
-      <AppForm mode="create" categories={facets.categories} tagOptions={facets.tags} />
+      <AppForm
+        mode="create"
+        categories={facets.categories}
+        tagOptions={facets.tags}
+        developerOptions={developers.map((developer) => ({
+          id: developer.id,
+          username: developer.username,
+          displayName: developer.displayName,
+        }))}
+      />
     </div>
   );
 }

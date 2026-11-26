@@ -2,6 +2,7 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 import { formatDateTime } from "@/lib/format";
 import { AUDIT_ACTION_LABEL, listAuditLogs } from "@/server/services/audit.service";
+import { requireAdminPage } from "@/server/http/guards";
 
 /**
  * 审计日志数据区。
@@ -9,6 +10,7 @@ import { AUDIT_ACTION_LABEL, listAuditLogs } from "@/server/services/audit.servi
  */
 async function LogsContent() {
   await connection();
+  await requireAdminPage();
   const logs = await listAuditLogs(100);
 
   return (

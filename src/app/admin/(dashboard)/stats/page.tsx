@@ -2,6 +2,7 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { getAdminStats } from "@/server/services/app.service";
+import { requireAdminPage } from "@/server/http/guards";
 
 /**
  * 统计指标卡片。
@@ -26,6 +27,7 @@ function MetricCard({ label, value, hint }: { label: string; value: number; hint
  */
 async function StatsContent() {
   await connection();
+  await requireAdminPage();
   const stats = await getAdminStats();
 
   return (

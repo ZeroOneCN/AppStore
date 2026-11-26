@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { DownloadButton } from "@/components/download-button";
 import { formatBytes, formatDateTime } from "@/lib/format";
 import { HelpTip } from "./help-tip";
 import type { AdminReleaseData } from "./types";
@@ -34,16 +35,25 @@ type ReleaseAction = "publish" | "set-current" | "archive";
  * @param props.appId 应用 ID
  * @param props.appType 应用类型
  * @param props.releases 版本列表
+ * @param props.apiBase 接口前缀，默认管理员接口
+ * @param props.autoPublish 上传成功后是否立即发布为当前版本
+ * @param props.showDownload 是否在版本行展示下载按钮
  * @returns 版本管理界面
  */
 export function ReleaseManager({
   appId,
   appType,
   releases,
+  apiBase = "/api/admin",
+  autoPublish = false,
+  showDownload = false,
 }: {
   appId: string;
   appType: "ANDROID" | "WEB";
   releases: AdminReleaseData[];
+  apiBase?: string;
+  autoPublish?: boolean;
+  showDownload?: boolean;
 }) {
   const router = useRouter();
   const [file, setFile] = useState<File | null>(null);
@@ -71,7 +81,7 @@ export function ReleaseManager({
 
     const xhr = new XMLHttpRequest();
     const query = new URLSearchParams({ filename: file.name });
-    xhr.open("POST", `/api/admin/apps/${appId}/releases?${query.toString()}`);
+    xhr.open("POST", `${apiBase}/apps/${appId}/releases?${query.toString()}`);
     xhr.setRequestHeader("Content-Type", "application/octet-stream");
     xhr.setRequestHeader("X-Version-Changelog", encodeURIComponent(changelog));
 
@@ -92,11 +102,19 @@ export function ReleaseManager({
 
       if (xhr.status >= 200 && xhr.status < 300) {
         const parsed = (data as UploadResponse | null)?.parsed;
-        setNotice(
-          parsed?.versionName
-            ? `上传成功：${parsed.packageName ?? ""} v${parsed.versionName}（${parsed.versionCode ?? ""}），草稿已创建，请点击「发布」上线`
-            : "上传成功，版本草稿已创建，请点击「发布」上线",
-        );
+        if (autoPublish) {
+          setNotice(
+            parsed?.versionName
+              ? `上传成功：${parsed.packageName ?? ""} v${parsed.versionName}（${parsed.versionCode ?? ""}），已自动发布为当前版本`
+              : "上传成功，已自动发布为当前版本",
+          );
+        } else {
+          setNotice(
+            parsed?.versionName
+              ? `上传成功：${parsed.packageName ?? ""} v${parsed.versionName}（${parsed.versionCode ?? ""}），草稿已创建，请点击「发布」上线`
+              : "上传成功，版本草稿已创建，请点击「发布」上线",
+          );
+        }
         setFile(null);
         setChangelog("");
         setFileInputKey((key) => key + 1);
@@ -128,7 +146,7 @@ export function ReleaseManager({
     setError(null);
     setNotice(null);
     try {
-      const response = await fetch(`/api/admin/releases/${releaseId}`, { method: "DELETE" });
+      const response = await fetch(`${apiBase}/releases/${releaseId}`, { method: "DELETE" });
       if (!response.ok) {
         const data: unknown = await response.json().catch(() => null);
         setError(errorMessageOf(data, "删除失败，请稍后重试"));
@@ -158,7 +176,7 @@ export function ReleaseManager({
     setError(null);
     setNotice(null);
     try {
-      const response = await fetch(`/api/admin/releases/${releaseId}/${action}`, { method: "POST" });
+      const response = await fetch(`${apiBase}/releases/${releaseId}/${action}`, { method: "POST" });
       const data: unknown = await response.json().catch(() => null);
       if (!response.ok) {
         setError(errorMessageOf(data, "操作失败，请稍后重试"));
@@ -181,7 +199,8 @@ export function ReleaseManager({
         <div className="rounded-xl border border-neutral-200 p-4 dark:border-neutral-800">
           <h3 className="text-sm font-semibold">上传新版本 APK</h3>
           <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-            APK 会边上传边解析，包名必须与当前应用一致；版本号重复会被拒绝。上传后先成为草稿。
+            APK 会边上传边解析，包名必须与当前应用一致；版本号重复会被拒绝。
+            {autoPublish ? "上传成功后自动发布为当前版本。" : "上传后先成为草稿。"}
           </p>
 
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
@@ -287,7 +306,11 @@ export function ReleaseManager({
                   ) : null}
                 </div>
 
-                <div className="flex shrink-0 flex-wrap gap-1.5">
+                <div className="flex shrink-0 flex-wrap items-center gap-1.5">
+                  {showDownload && release.status !== "DRAFT" ? (
+                    <DownloadButton releaseId={release.id} label="下载" variant="ghost" />
+                  ) : null}
+
                   {release.status === "DRAFT" ? (
                     <button
                       type="button"

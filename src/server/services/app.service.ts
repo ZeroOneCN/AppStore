@@ -30,6 +30,8 @@ export interface AppCardDto {
   pinned: boolean;
   downloadCount: number;
   updatedAt: string;
+  /** 归属开发者，未指派时为 null */
+  developer: { id: string; username: string; displayName: string } | null;
   currentVersion: { versionName: string; versionCode: number; publishedAt: string } | null;
 }
 
@@ -52,7 +54,13 @@ export interface AppDetailDto extends AppCardDto {
     publishedAt: string | null;
     downloadUrl: string;
   } | null;
-  releases: { versionName: string; versionCode: number; publishedAt: string | null }[];
+  releases: {
+    id: string;
+    versionName: string;
+    versionCode: number;
+    status: string;
+    publishedAt: string | null;
+  }[];
 }
 
 /** 创建 / 更新应用的输入 */
@@ -68,6 +76,7 @@ export interface AppInput {
   packageName?: string | null;
   visibility?: Visibility;
   pinned?: boolean;
+  developerId?: string | null;
 }
 
 /** slug 只允许小写字母、数字与连字符 */
@@ -143,10 +152,15 @@ function normalizeInput(input: AppInput): AppInput {
 
 /**
  * 将数据库记录转换为列表卡片。
- * @param app 应用记录（含当前版本）
+ * @param app 应用记录（含当前版本与归属开发者）
  * @returns 卡片 DTO
  */
-function toCard(app: App & { releases: Release[] }): AppCardDto {
+function toCard(
+  app: App & {
+    releases: Release[];
+    developer?: { id: string; username: string; displayName: string } | null;
+  },
+): AppCardDto {
   const current = app.releases[0];
   return {
     id: app.id,
@@ -162,6 +176,13 @@ function toCard(app: App & { releases: Release[] }): AppCardDto {
     pinned: app.pinned,
     downloadCount: app.downloadCount,
     updatedAt: app.updatedAt.toISOString(),
+    developer: app.developer
+      ? {
+          id: app.developer.id,
+          username: app.developer.username,
+          displayName: app.developer.displayName,
+        }
+      : null,
     currentVersion: current
       ? {
           versionName: current.versionName,
@@ -198,7 +219,10 @@ export async function listPublicApps(filters: AppListFilters): Promise<AppCardDt
   const apps = await prisma.app.findMany({
     where,
     orderBy,
-    include: { releases: { where: { isCurrent: true }, take: 1 } },
+    include: {
+      releases: { where: { isCurrent: true }, take: 1 },
+      developer: { select: { id: true, username: true, displayName: true } },
+    },
   });
 
   return apps.map(toCard);
@@ -211,7 +235,27 @@ export async function listPublicApps(filters: AppListFilters): Promise<AppCardDt
 export async function listAdminApps(): Promise<AppCardDto[]> {
   const apps = await prisma.app.findMany({
     orderBy: [{ pinned: "desc" }, { updatedAt: "desc" }],
-    include: { releases: { where: { isCurrent: true }, take: 1 } },
+    include: {
+      releases: { where: { isCurrent: true }, take: 1 },
+      developer: { select: { id: true, username: true, displayName: true } },
+    },
+  });
+  return apps.map(toCard);
+}
+
+/**
+ * 查询某开发者名下的应用。
+ * @param developerId 开发者 ID
+ * @returns 应用卡片数组（更新时间倒序）
+ */
+export async function listAppsByDeveloper(developerId: string): Promise<AppCardDto[]> {
+  const apps = await prisma.app.findMany({
+    where: { developerId },
+    orderBy: { updatedAt: "desc" },
+    include: {
+      releases: { where: { isCurrent: true }, take: 1 },
+      developer: { select: { id: true, username: true, displayName: true } },
+    },
   });
   return apps.map(toCard);
 }
@@ -228,10 +272,11 @@ export async function getAppBySlug(slug: string, includePrivate = false): Promis
     where: { slug },
     include: {
       releases: {
-        where: { status: "PUBLISHED" },
+        where: { status: { in: ["PUBLISHED", "ARCHIVED"] } },
         orderBy: { versionCode: "desc" },
         take: MAX_RELEASES_IN_DETAIL,
       },
+      developer: { select: { id: true, username: true, displayName: true } },
     },
   });
 
@@ -264,8 +309,10 @@ export async function getAppBySlug(slug: string, includePrivate = false): Promis
         }
       : null,
     releases: app.releases.map((release) => ({
+      id: release.id,
       versionName: release.versionName,
       versionCode: release.versionCode,
+      status: release.status,
       publishedAt: release.publishedAt?.toISOString() ?? null,
     })),
   };
@@ -299,6 +346,21 @@ async function resolveUniqueSlug(base: string): Promise<string> {
 }
 
 /**
+ * 校验归属开发者是否存在。
+ * @param developerId 开发者 ID，空值表示不指派
+ * @returns 无
+ * @throws AppError 开发者不存在时抛出 VALIDATION_FAILED
+ */
+async function assertDeveloperExists(developerId: string | null | undefined): Promise<void> {
+  if (!developerId) return;
+  const developer = await prisma.developer.findUnique({
+    where: { id: developerId },
+    select: { id: true },
+  });
+  if (!developer) throw new AppError("VALIDATION_FAILED", "归属开发者不存在");
+}
+
+/**
  * 创建应用，访问标识重名时自动追加序号。
  * @param input 应用字段
  * @returns 新建的应用记录
@@ -306,6 +368,7 @@ async function resolveUniqueSlug(base: string): Promise<string> {
  */
 export async function createApp(input: AppInput): Promise<App> {
   const data = normalizeInput(input);
+  await assertDeveloperExists(data.developerId);
 
   if (data.packageName) {
     const packageOwner = await prisma.app.findFirst({
@@ -332,6 +395,7 @@ export async function createApp(input: AppInput): Promise<App> {
       packageName: data.packageName,
       visibility: data.visibility ?? "PUBLIC",
       pinned: data.pinned ?? false,
+      developerId: data.developerId ?? null,
     },
   });
 }
@@ -357,7 +421,9 @@ export async function updateApp(id: string, input: Partial<AppInput>): Promise<A
     packageName: input.packageName === undefined ? current.packageName : input.packageName,
     visibility: (input.visibility ?? current.visibility) as Visibility,
     pinned: input.pinned ?? current.pinned,
+    developerId: input.developerId === undefined ? current.developerId : input.developerId,
   });
+  await assertDeveloperExists(merged.developerId);
 
   const conflict = await prisma.app.findFirst({
     where: {
@@ -386,6 +452,7 @@ export async function updateApp(id: string, input: Partial<AppInput>): Promise<A
       packageName: merged.packageName,
       visibility: merged.visibility ?? "PUBLIC",
       pinned: merged.pinned ?? false,
+      developerId: merged.developerId ?? null,
     },
   });
 }

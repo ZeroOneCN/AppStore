@@ -13,6 +13,8 @@ import { formatDateTime } from "@/lib/format";
 import { isAppError } from "@/server/infra/errors";
 import { getAppById, listAdminFacets, parseJsonArray } from "@/server/services/app.service";
 import { listAllReleases } from "@/server/services/release.service";
+import { listDevelopers } from "@/server/services/developer.service";
+import { requireAdminPage } from "@/server/http/guards";
 
 /** 动态路由参数 */
 type RouteParams = Promise<{ id: string }>;
@@ -24,6 +26,7 @@ type RouteParams = Promise<{ id: string }>;
  */
 async function AdminAppContent({ params }: { params: RouteParams }) {
   await connection();
+  await requireAdminPage();
   const { id } = await params;
 
   let record;
@@ -34,7 +37,11 @@ async function AdminAppContent({ params }: { params: RouteParams }) {
     throw error;
   }
 
-  const [releases, facets] = await Promise.all([listAllReleases(id), listAdminFacets()]);
+  const [releases, facets, developers] = await Promise.all([
+    listAllReleases(id),
+    listAdminFacets(),
+    listDevelopers(),
+  ]);
 
   const app: AdminAppData = {
     id: record.id,
@@ -49,6 +56,7 @@ async function AdminAppContent({ params }: { params: RouteParams }) {
     packageName: record.packageName,
     visibility: record.visibility === "PRIVATE" ? "PRIVATE" : "PUBLIC",
     pinned: record.pinned,
+    developerId: record.developerId,
     iconUrl: record.iconPath ? `/api/assets/${record.iconPath}` : null,
     screenshots: parseJsonArray(record.screenshots).map((path) => `/api/assets/${path}`),
   };
@@ -116,7 +124,17 @@ async function AdminAppContent({ params }: { params: RouteParams }) {
 
       <section>
         <h2 className="mb-3 text-sm font-semibold text-neutral-500 dark:text-neutral-400">基础信息</h2>
-        <AppForm mode="edit" app={app} categories={facets.categories} tagOptions={facets.tags} />
+        <AppForm
+          mode="edit"
+          app={app}
+          categories={facets.categories}
+          tagOptions={facets.tags}
+          developerOptions={developers.map((developer) => ({
+            id: developer.id,
+            username: developer.username,
+            displayName: developer.displayName,
+          }))}
+        />
       </section>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">

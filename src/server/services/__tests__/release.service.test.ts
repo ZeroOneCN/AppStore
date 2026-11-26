@@ -6,6 +6,7 @@ import {
   archive,
   createDraft,
   evaluateUpdate,
+  listDownloadableReleases,
   publish,
   setCurrent,
 } from "../release.service";
@@ -61,8 +62,23 @@ describe("版本服务", () => {
     });
   });
 
-  it("重复版本号返回 VERSION_CONFLICT", async () => {
+  it("记录上传者并按可下载状态筛选历史版本", async () => {
     const app = await seedApp();
+    const published = await draft(app, 2, { uploadedBy: "dev:alice" });
+    await publish(published.id);
+    const archived = await draft(app, 1, { uploadedBy: "admin" });
+    await archive(archived.id);
+    await draft(app, 3, { uploadedBy: "admin" });
+
+    const stored = await prisma.release.findUniqueOrThrow({ where: { id: published.id } });
+    expect(stored.uploadedBy).toBe("dev:alice");
+
+    const downloadable = await listDownloadableReleases(app.id);
+    expect(downloadable.map((item) => item.versionCode)).toEqual([2, 1]);
+    expect(downloadable.map((item) => item.status)).toEqual(["PUBLISHED", "ARCHIVED"]);
+  });
+
+  it("重复版本号返回 VERSION_CONFLICT", async () => {    const app = await seedApp();
     await draft(app, 2);
     await expect(draft(app, 2)).rejects.toMatchObject({ code: "VERSION_CONFLICT" });
   });

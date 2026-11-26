@@ -4,10 +4,21 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 /**
- * 管理员登录表单。
+ * 登录表单，管理员与开发者门户共用。
+ * @param props.endpoint 登录接口地址
+ * @param props.redirectTo 登录成功后跳转路径
+ * @param props.submitLabel 提交按钮文案前缀
  * @returns 登录表单
  */
-export function LoginForm() {
+export function LoginForm({
+  endpoint = "/api/admin/login",
+  redirectTo = "/admin/apps",
+  submitLabel = "登录",
+}: {
+  endpoint?: string;
+  redirectTo?: string;
+  submitLabel?: string;
+}) {
   const router = useRouter();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -24,7 +35,7 @@ export function LoginForm() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch("/api/admin/login", {
+      const response = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
@@ -40,7 +51,7 @@ export function LoginForm() {
         return;
       }
 
-      router.replace("/admin/apps");
+      router.replace(redirectTo);
       router.refresh();
     } catch {
       setError("网络异常，请检查连接后重试");
@@ -93,7 +104,7 @@ export function LoginForm() {
         disabled={loading}
         className="btn-primary w-full"
       >
-        {loading ? "登录中…" : "登录"}
+        {loading ? "登录中…" : submitLabel}
       </button>
     </form>
   );

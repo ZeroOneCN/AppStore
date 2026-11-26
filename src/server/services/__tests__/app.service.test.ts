@@ -150,8 +150,53 @@ describe("应用服务", () => {
     expect(detail.releases).toHaveLength(1);
   });
 
-  it("私有应用详情对前台不可见", async () => {
-    await createApp({
+  it("详情历史版本包含已发布与已归档，排除草稿", async () => {
+    const app = await createApp({ ...ANDROID_BASE, slug: "history" });
+    const base = {
+      appId: app.id,
+      minSdk: 24,
+      signFingerprint: "AA:BB",
+      fileSize: 1024,
+      sha256: "sha",
+    };
+    await prisma.release.create({
+      data: {
+        ...base,
+        versionCode: 3,
+        versionName: "1.0.3",
+        filePath: `apks/${app.id}/3.apk`,
+        status: "DRAFT",
+      },
+    });
+    await prisma.release.create({
+      data: {
+        ...base,
+        versionCode: 2,
+        versionName: "1.0.2",
+        filePath: `apks/${app.id}/2.apk`,
+        status: "ARCHIVED",
+        publishedAt: new Date(),
+      },
+    });
+    await prisma.release.create({
+      data: {
+        ...base,
+        versionCode: 1,
+        versionName: "1.0.1",
+        filePath: `apks/${app.id}/1.apk`,
+        status: "PUBLISHED",
+        isCurrent: true,
+        publishedAt: new Date(),
+      },
+    });
+
+    const detail = await getAppBySlug("history");
+    expect(detail.releases.map((item) => item.versionCode)).toEqual([2, 1]);
+    expect(detail.releases.map((item) => item.status)).toEqual(["ARCHIVED", "PUBLISHED"]);
+    expect(detail.releases.every((item) => item.id.length > 0)).toBe(true);
+  });
+
+  it("私有应用详情对前台不可见", async () => {    await createApp({
       ...ANDROID_BASE,
       slug: "secret",
       visibility: "PRIVATE",

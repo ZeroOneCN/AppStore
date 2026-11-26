@@ -9,9 +9,18 @@ import { errorMessageOf, secondaryButtonClass } from "./ui";
  * 截图管理：上传与删除。
  * @param props.appId 应用 ID
  * @param props.screenshots 当前截图地址
+ * @param props.apiBase 接口前缀，默认管理员接口
  * @returns 截图列表与上传控件
  */
-export function ScreenshotManager({ appId, screenshots }: { appId: string; screenshots: string[] }) {
+export function ScreenshotManager({
+  appId,
+  screenshots,
+  apiBase = "/api/admin",
+}: {
+  appId: string;
+  screenshots: string[];
+  apiBase?: string;
+}) {
   const router = useRouter();
   const [uploading, setUploading] = useState(false);
   const [deletingIndex, setDeletingIndex] = useState<number | null>(null);
@@ -37,7 +46,7 @@ export function ScreenshotManager({ appId, screenshots }: { appId: string; scree
         }
         const formData = new FormData();
         formData.append("file", file);
-        const response = await fetch(`/api/admin/apps/${appId}/screenshots`, {
+        const response = await fetch(`${apiBase}/apps/${appId}/screenshots`, {
           method: "POST",
           body: formData,
         });
@@ -64,7 +73,7 @@ export function ScreenshotManager({ appId, screenshots }: { appId: string; scree
     setError(null);
     setDeletingIndex(index);
     try {
-      const response = await fetch(`/api/admin/apps/${appId}/screenshots?index=${index}`, {
+      const response = await fetch(`${apiBase}/apps/${appId}/screenshots?index=${index}`, {
         method: "DELETE",
       });
       const data: unknown = await response.json().catch(() => null);

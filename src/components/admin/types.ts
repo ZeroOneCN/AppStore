@@ -12,6 +12,8 @@ export interface AdminAppData {
   packageName: string | null;
   visibility: "PUBLIC" | "PRIVATE";
   pinned: boolean;
+  /** 归属开发者 ID，空表示管理员直接管理 */
+  developerId?: string | null;
   iconUrl: string | null;
   screenshots: string[];
 }
