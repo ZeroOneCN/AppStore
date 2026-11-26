@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'core/app_config.dart';
@@ -8,6 +9,15 @@ import 'ui/home_shell.dart';
 /// 应用入口：先读取本地保存的服务端地址，再启动界面。
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // 首帧前设置系统栏样式，避免启动阶段状态栏图标与浅色背景同色而看不见
+  final isDark =
+      WidgetsBinding.instance.platformDispatcher.platformBrightness == Brightness.dark;
+  SystemChrome.setSystemUIOverlayStyle(
+    (isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark).copyWith(
+      statusBarColor: Colors.transparent,
+      systemNavigationBarColor: Colors.transparent,
+    ),
+  );
   await AppConfig.instance.load();
   runApp(const AppStoreApp());
 }
@@ -67,6 +77,16 @@ ThemeData _buildTheme(Brightness brightness) {
       titleSpacing: 16,
       titleTextStyle: textTheme.titleLarge?.copyWith(fontSize: 20),
       iconTheme: IconThemeData(color: scheme.onSurface, size: 22),
+      // 状态栏透明，图标颜色跟随主题：浅色用深色图标，深色用浅色图标
+      systemOverlayStyle: (isDark
+              ? SystemUiOverlayStyle.light
+              : SystemUiOverlayStyle.dark)
+          .copyWith(
+        statusBarColor: Colors.transparent,
+        systemNavigationBarColor: Colors.transparent,
+        systemNavigationBarIconBrightness:
+            isDark ? Brightness.light : Brightness.dark,
+      ),
     ),
     navigationBarTheme: NavigationBarThemeData(
       backgroundColor: isDark
