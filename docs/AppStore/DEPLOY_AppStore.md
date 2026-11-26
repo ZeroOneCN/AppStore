@@ -135,6 +135,8 @@ server {
     location / {
         proxy_pass http://127.0.0.1:3000;
         proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_request_buffering off;
     }
@@ -146,6 +148,15 @@ server {
 1. `.env` 中 `BASE_URL=https://store.example.com`，重启服务。会话 Cookie 会自动切换为 `Secure`，旧 HTTP 会话需重新登录。
 2. 客户端「设置」页改为 HTTPS 地址。
 3. 如不再需要 HTTP，可关闭 3000 端口的外部访问。
+
+### 9.1 安全配置说明
+
+- 全站已由应用下发 CSP、HSTS、X-Frame-Options、X-Content-Type-Options、Referrer-Policy、Permissions-Policy、COOP/CORP 等响应头，反向代理无需重复配置。
+- 写请求会校验 `Origin` 与当前站点是否一致；未携带 `Origin` 的原生客户端与脚本不受影响。
+- 登录限流同时按来源 IP 与账号计数。**反向代理必须覆盖** `X-Real-IP` 与 `X-Forwarded-For`（如上例），否则客户端可伪造来源 IP；账号维度限流仍会生效。
+- 站点根地址自动跟随访问域名，OpenAPI、更新检查与下载票据均返回 `no-store`，避免 Host 头缓存投毒。
+- 会话 Cookie 为 `HttpOnly; SameSite=Lax`，HTTPS 下自动附加 `Secure`；密钥请使用至少 32 字节随机值。
+- 已知限制：CSP 为兼容 Next.js 内联脚本保留 `unsafe-inline`；不存在的应用详情页受 PPR 流式渲染影响返回 200（内容为未找到页面）；限流计数保存在进程内，重启后清空。
 
 ## 10. 冒烟脚本说明
 

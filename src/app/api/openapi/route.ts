@@ -303,12 +303,16 @@ export async function GET(request: Request): Promise<Response> {
     return new Response(renderOpenApiHtml(spec as unknown as Record<string, unknown>, base), {
       headers: {
         "Content-Type": "text/html; charset=utf-8",
-        "Cache-Control": "public, max-age=300",
+        "Cache-Control": "no-store",
+        Vary: "X-Forwarded-Host, X-Forwarded-Proto, Host",
       },
     });
   }
 
   return Response.json(spec, {
-    headers: { "Cache-Control": "public, max-age=300" },
+    headers: {
+      "Cache-Control": "no-store",
+      Vary: "X-Forwarded-Host, X-Forwarded-Proto, Host",
+    },
   });
 }

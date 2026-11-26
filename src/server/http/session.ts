@@ -89,11 +89,24 @@ export async function requireDeveloperApp(
 
 /**
  * 提取登录限流使用的客户端标识。
+ * 优先使用反向代理写入的 X-Real-IP；否则取 X-Forwarded-For 最后一跳（由最近的代理追加），
+ * 避免攻击者伪造最左侧地址绕过限流。
  * @param request HTTP 请求
- * @returns 优先取 X-Forwarded-For 首个地址，其次 X-Real-IP，兜底 local
+ * @returns 客户端标识
  */
 export function clientKeyFrom(request: Request): string {
+  const realIp = request.headers.get("x-real-ip")?.trim();
+  if (realIp) return realIp;
+
   const forwarded = request.headers.get("x-forwarded-for");
-  if (forwarded) return forwarded.split(",")[0]?.trim() || "local";
-  return request.headers.get("x-real-ip") ?? "local";
+  if (forwarded) {
+    const hops = forwarded
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+    const nearest = hops[hops.length - 1];
+    if (nearest) return nearest;
+  }
+
+  return "local";
 }

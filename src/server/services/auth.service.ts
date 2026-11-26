@@ -7,8 +7,20 @@ import { AppError } from "../infra/errors";
 
 const PASSWORD_COST = 12;
 
+/** 账号不存在时也执行一次 bcrypt 比较，避免通过响应时间枚举用户名 */
+const DUMMY_PASSWORD_HASH = "$2b$12$sViaH/gRWp6PbOXa7ErrBeTKo4e.yYbXPDpWOF/SaNZh/gZllnWuu";
+
 /** 登录失败计数：key 为客户端标识（IP），value 为次数与窗口过期时间 */
 const loginFailures = new Map<string, { count: number; resetAt: number }>();
+
+/** 针对账号的失败计数：防止攻击者轮换 IP 后无限撞库 */
+const usernameFailures = new Map<string, { count: number; resetAt: number }>();
+
+/** 单账号失败阈值（15 分钟） */
+const USERNAME_RATE_LIMIT = { maxFailures: 20, windowMs: 15 * 60 * 1000 } as const;
+
+/** 内存计数上限，避免伪造请求头造成 Map 无限增长 */
+const MAX_TRACKED_KEYS = 5000;
 
 /** 管理员会话载荷：角色字段用于统一登录后的权限分级 */
 export type SessionPayload = { sub: "admin"; username: string; role: "admin" };
@@ -100,6 +112,59 @@ export function sessionCookieOptions(secure?: boolean): {
 }
 
 /**
+ * 清理过期计数，并在数量超限时丢弃最早记录。
+ * @param map 计数表
+ * @returns 无
+ */
+function pruneFailures(map: Map<string, { count: number; resetAt: number }>): void {
+  if (map.size < MAX_TRACKED_KEYS) return;
+  const now = Date.now();
+  for (const [key, record] of map) {
+    if (now >= record.resetAt) map.delete(key);
+  }
+  while (map.size >= MAX_TRACKED_KEYS) {
+    const oldest = map.keys().next().value;
+    if (typeof oldest !== "string") break;
+    map.delete(oldest);
+  }
+}
+
+/**
+ * 检查该账号是否已被限流。
+ * @param username 用户名
+ * @throws AppError 超过失败次数时抛出 RATE_LIMITED
+ */
+function assertUsernameNotRateLimited(username: string): void {
+  const key = username.trim().toLowerCase();
+  const record = usernameFailures.get(key);
+  if (!record) return;
+  if (Date.now() >= record.resetAt) {
+    usernameFailures.delete(key);
+    return;
+  }
+  if (record.count >= USERNAME_RATE_LIMIT.maxFailures) {
+    throw new AppError("RATE_LIMITED", "尝试次数过多，请稍后再试");
+  }
+}
+
+/**
+ * 记录一次账号维度的登录失败。
+ * @param username 用户名
+ * @returns 无
+ */
+function recordUsernameFailure(username: string): void {
+  const key = username.trim().toLowerCase();
+  const now = Date.now();
+  const record = usernameFailures.get(key);
+  if (!record || now >= record.resetAt) {
+    pruneFailures(usernameFailures);
+    usernameFailures.set(key, { count: 1, resetAt: now + USERNAME_RATE_LIMIT.windowMs });
+    return;
+  }
+  record.count += 1;
+}
+
+/**
  * 检查该客户端是否已被限流。
  * @param clientKey 客户端标识（IP）
  * @throws AppError 超过失败次数时抛出 RATE_LIMITED
@@ -125,6 +190,7 @@ function recordFailure(clientKey: string): void {
   const now = Date.now();
   const record = loginFailures.get(clientKey);
   if (!record || now >= record.resetAt) {
+    pruneFailures(loginFailures);
     loginFailures.set(clientKey, { count: 1, resetAt: now + LOGIN_RATE_LIMIT.windowMs });
     return;
   }
@@ -150,16 +216,19 @@ function clearFailures(clientKey: string): void {
  */
 export async function login(username: string, password: string, clientKey: string): Promise<string> {
   assertNotRateLimited(clientKey);
+  assertUsernameNotRateLimited(username);
 
   const user = await prisma.adminUser.findUnique({ where: { username } });
-  const matched = user ? await verifyPassword(password, user.passwordHash) : false;
+  const matched = await verifyPassword(password, user?.passwordHash ?? DUMMY_PASSWORD_HASH);
 
   if (!user || !matched) {
     recordFailure(clientKey);
+    recordUsernameFailure(username);
     throw new AppError("UNAUTHORIZED", "用户名或密码错误");
   }
 
   clearFailures(clientKey);
+  usernameFailures.delete(username.trim().toLowerCase());
   return createSessionToken(user.username);
 }
 
@@ -200,4 +269,5 @@ export async function changePassword(
  */
 export function resetLoginRateLimit(): void {
   loginFailures.clear();
+  usernameFailures.clear();
 }

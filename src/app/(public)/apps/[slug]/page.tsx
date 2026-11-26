@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
-import { Suspense } from "react";
+import { cache, Suspense } from "react";
+import type { Metadata } from "next";
 import { AppIcon } from "@/components/app-card";
 import { DownloadButton } from "@/components/download-button";
 import { ScreenshotGallery } from "@/components/screenshot-gallery";
@@ -11,6 +12,25 @@ import { getAppBySlug, type AppDetailDto } from "@/server/services/app.service";
 
 /** 动态路由参数 */
 type RouteParams = Promise<{ slug: string }>;
+
+/** 同一请求内复用应用详情查询 */
+const loadApp = cache(async (slug: string): Promise<AppDetailDto> => getAppBySlug(slug));
+
+/**
+ * 详情页元数据：应用不存在时直接返回 404，避免流式渲染出现软 404。
+ * @param props.params 路由参数
+ * @returns 页面元数据
+ */
+export async function generateMetadata({ params }: { params: RouteParams }): Promise<Metadata> {
+  const { slug } = await params;
+  try {
+    const app = await loadApp(slug);
+    return { title: app.name, description: app.summary };
+  } catch (error) {
+    if (isAppError(error) && error.code === "NOT_FOUND") notFound();
+    throw error;
+  }
+}
 
 /**
  * 信息卡中的单行字段。
@@ -38,7 +58,7 @@ async function AppDetailContent({ params }: { params: RouteParams }) {
 
   let app: AppDetailDto;
   try {
-    app = await getAppBySlug(slug);
+    app = await loadApp(slug);
   } catch (error) {
     if (isAppError(error) && error.code === "NOT_FOUND") notFound();
     throw error;
