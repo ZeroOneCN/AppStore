@@ -15,11 +15,13 @@ export function DownloadButton({
   label = "下载 APK",
   className = "",
   variant = "primary",
+  ariaLabel,
 }: {
   releaseId: string;
   label?: string;
   className?: string;
   variant?: "primary" | "ghost";
+  ariaLabel?: string;
 }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -74,25 +76,33 @@ export function DownloadButton({
         type="button"
         onClick={handleDownload}
         disabled={loading}
+        aria-label={ariaLabel}
         className={`${
           variant === "ghost"
-            ? "rounded-lg border border-neutral-200 px-2.5 py-1 text-xs transition hover:bg-neutral-100 disabled:opacity-60 dark:border-neutral-700 dark:hover:bg-neutral-800"
+            ? "inline-flex min-h-9 min-w-[92px] items-center justify-center gap-1.5 rounded-xl border border-black/10 bg-white/80 px-3 py-1.5 text-xs font-medium text-neutral-700 shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition duration-200 hover:border-brand/30 hover:bg-white hover:text-brand active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
             : "btn-primary"
         } ${className}`}
       >
-        <svg
-          aria-hidden
-          viewBox="0 0 20 20"
-          fill="currentColor"
-          className={variant === "ghost" ? "h-3.5 w-3.5" : "h-4 w-4"}
-        >
-          <path d="M10 2a1 1 0 0 1 1 1v7.586l2.293-2.293a1 1 0 1 1 1.414 1.414l-4 4a1 1 0 0 1-1.414 0l-4-4a1 1 0 1 1 1.414-1.414L9 10.586V3a1 1 0 0 1 1-1Z" />
-          <path d="M3 14a1 1 0 0 1 1 1v1h12v-1a1 1 0 1 1 2 0v2a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-2a1 1 0 0 1 1-1Z" />
-        </svg>
-        {loading ? "正在获取链接…" : label}
+        {loading ? (
+          <svg aria-hidden viewBox="0 0 20 20" fill="none" className={variant === "ghost" ? "h-3.5 w-3.5 animate-spin" : "h-4 w-4 animate-spin"}>
+            <circle cx="10" cy="10" r="7" stroke="currentColor" strokeWidth="2" strokeOpacity="0.25" />
+            <path d="M17 10a7 7 0 0 0-7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+        ) : (
+          <svg
+            aria-hidden
+            viewBox="0 0 20 20"
+            fill="currentColor"
+            className={variant === "ghost" ? "h-3.5 w-3.5" : "h-4 w-4"}
+          >
+            <path d="M10 2a1 1 0 0 1 1 1v7.586l2.293-2.293a1 1 0 1 1 1.414 1.414l-4 4a1 1 0 0 1-1.414 0l-4-4a1 1 0 1 1 1.414-1.414L9 10.586V3a1 1 0 0 1 1-1Z" />
+            <path d="M3 14a1 1 0 0 1 1 1v1h12v-1a1 1 0 1 1 2 0v2a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-2a1 1 0 0 1 1-1Z" />
+          </svg>
+        )}
+        {loading ? "获取中…" : label}
       </button>
       {error ? (
-        <p role="alert" className="text-xs text-rose-600 dark:text-rose-400">
+        <p role="alert" className="text-xs text-rose-600">
           {error}
         </p>
       ) : null}

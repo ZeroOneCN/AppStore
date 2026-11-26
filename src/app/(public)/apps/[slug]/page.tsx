@@ -179,7 +179,12 @@ async function AppDetailContent({ params }: { params: RouteParams }) {
                       <span className="hidden text-xs text-neutral-500 sm:inline dark:text-neutral-400">
                         {formatDateTime(item.publishedAt)}
                       </span>
-                      <DownloadButton releaseId={item.id} label="下载" variant="ghost" />
+                      <DownloadButton
+                        releaseId={item.id}
+                        label="下载"
+                        variant="ghost"
+                        ariaLabel={`下载 v${item.versionName}`}
+                      />
                     </span>
                   </li>
                 ))}
