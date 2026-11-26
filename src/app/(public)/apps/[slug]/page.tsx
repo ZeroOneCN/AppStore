@@ -199,6 +199,20 @@ async function AppDetailContent({ params }: { params: RouteParams }) {
                 <InfoRow label="发布时间">{formatDateTime(release.publishedAt)}</InfoRow>
               ) : null}
               {app.type === "WEB" ? <InfoRow label="类型">网页作品</InfoRow> : null}
+              <InfoRow label="开发者">
+                {app.developer ? (
+                  <span>
+                    {app.developer.displayName || app.developer.username}
+                    {app.developer.displayName ? (
+                      <span className="ml-1.5 text-[11px] font-normal text-neutral-400">
+                        @{app.developer.username}
+                      </span>
+                    ) : null}
+                  </span>
+                ) : (
+                  <span>平台官方</span>
+                )}
+              </InfoRow>
               <InfoRow label="下载次数">{app.downloadCount}</InfoRow>
             </div>
 
