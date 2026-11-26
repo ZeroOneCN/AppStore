@@ -140,12 +140,43 @@ export async function GET(): Promise<Response> {
         get: {
           tags: ["update"],
           summary: "按包名与版本号检查更新",
+          description:
+            "公开接口，供应用内置检查更新；只返回公开且已发布的最新版本。单 IP 每分钟最多 120 次，超出返回 429。downloadUrl 为 10 分钟有效的签名直链。",
           parameters: [
             { name: "packageName", in: "query", required: true, schema: { type: "string" } },
             { name: "versionCode", in: "query", required: true, schema: { type: "integer" } },
           ],
           responses: {
-            "200": { description: "hasUpdate / forceUpdate / latest 下载信息" },
+            "200": {
+              description: "hasUpdate / forceUpdate / latest 下载信息",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {
+                      hasUpdate: { type: "boolean" },
+                      forceUpdate: { type: "boolean" },
+                      reason: { type: ["string", "null"], enum: ["NOT_FOUND", null] },
+                      latest: {
+                        type: ["object", "null"],
+                        properties: {
+                          versionName: { type: "string" },
+                          versionCode: { type: "integer" },
+                          changelog: { type: "string" },
+                          fileSize: { type: "integer" },
+                          sha256: { type: "string" },
+                          minSdk: { type: ["integer", "null"] },
+                          minSupportedVersionCode: { type: ["integer", "null"] },
+                          downloadUrl: { type: "string" },
+                          publishedAt: { type: ["string", "null"], format: "date-time" },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            "429": { description: "请求过于频繁" },
           },
         },
       },

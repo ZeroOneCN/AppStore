@@ -35,6 +35,7 @@ export interface UpdateCheckResult {
     fileSize: number;
     sha256: string;
     minSdk: number | null;
+    minSupportedVersionCode: number | null;
     downloadUrl: string;
     publishedAt: string | null;
   } | null;
@@ -303,6 +304,7 @@ export async function evaluateUpdate(
       fileSize: latest.fileSize,
       sha256: latest.sha256,
       minSdk: latest.minSdk,
+      minSupportedVersionCode: latest.minSupportedVersionCode,
       downloadUrl: signDownloadPath(latest.id).url,
       publishedAt: latest.publishedAt?.toISOString() ?? null,
     },

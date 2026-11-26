@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 const NAV_ITEMS = [
   { href: "/developer/apps", label: "我的应用", exact: false },
   { href: "/developer/apps/new", label: "新建应用", exact: true },
+  { href: "/developer/docs", label: "接入文档", exact: true },
   { href: "/developer/settings", label: "账号设置", exact: true },
 ];
 

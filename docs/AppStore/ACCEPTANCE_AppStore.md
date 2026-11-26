@@ -273,3 +273,12 @@ HTTP 冒烟实测明细（种子数据：`smoke-pack`，真实 APK 4026 版，�
 | 历史下载 | 通过 | 公开详情页历史版本每行带下载按钮（3 个版本）；归档版本保留在列表并可下载，草稿不公开 |
 | 页面鉴权加固 | 通过 | 页面数据层补充 `requireAdminPage` / `requireDeveloperPage`；未登录访问 `/admin/apps`、`/admin/developers`、`/developer/*` 的响应不再包含业务数据 |
 | 测试 | 通过 | `npm test` 58/58；`typecheck`、`lint`、`build` 全部通过 |
+### 更新检查开放 API（B14）
+
+| 项目 | 结果 | 证据 |
+|---|---|---|
+| 响应字段 | 通过 | `/api/update/check` 的 `latest` 增加 `minSupportedVersionCode`，配合 `forceUpdate` 供客户端判断强制更新 |
+| 限流 | 通过 | 单 IP 每分钟最多 120 次，超出返回 429 RATE_LIMITED；进程内实现，多实例部署需换共享存储 |
+| 接入文档 | 通过 | 开发者门户新增 `/developer/docs`：接口地址、参数表、响应示例、forceUpdate 语义、Kotlin/Flutter 示例 |
+| 文档同步 | 通过 | `docs/AppStore/API_AppStore.md` 补充 minSupportedVersionCode、限流、开发者接口清单；`/api/openapi` 更新响应 schema |
+| 验证 | 通过 | `npm test` 58/58；`typecheck`、`lint`、`build` 通过；`/developer/docs` 登录后返回 200 |

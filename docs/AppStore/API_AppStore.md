@@ -85,6 +85,7 @@ curl "$BASE_URL/api/public/apps?type=ANDROID&sort=downloads"
     "fileSize": 99733590,
     "sha256": "…",
     "minSdk": 24,
+    "minSupportedVersionCode": 8,
     "downloadUrl": "/api/download/…?expires=…&signature=…",
     "publishedAt": "2026-11-25T09:00:00.000Z"
   }
@@ -94,7 +95,9 @@ curl "$BASE_URL/api/public/apps?type=ANDROID&sort=downloads"
 约定：
 - 应用不存在或没有正式版本时仍返回 200，`hasUpdate=false`、`reason="NOT_FOUND"`
 - `forceUpdate` 由版本的强制更新标记或 `minSupportedVersionCode` 判定
-- `downloadUrl` 已带签名，可直接下载；请使用 HTTPS 并校验 `sha256`
+- `downloadUrl` 已带签名，可直接下载；有效期 10 分钟，请使用 HTTPS 并校验 `sha256`
+- 只返回「公开 + 已发布」的版本；单 IP 每分钟最多 120 次，超出返回 429
+- 开发者可在门户「接入文档」页查看 Kotlin / Flutter 示例（`/developer/docs`）
 
 ## 三、后台接口
 
@@ -114,6 +117,24 @@ curl "$BASE_URL/api/public/apps?type=ANDROID&sort=downloads"
 | `POST /api/admin/releases/{id}/archive` | 归档版本 |
 | `POST /api/admin/releases/{id}/set-current` | 切换到该版本（回滚） |
 | `DELETE /api/admin/releases/{id}` | 删除历史版本，当前版本返回 400 |
+| `GET/POST /api/admin/developers` | 开发者列表（含应用数）/ 创建开发者 |
+| `PATCH /api/admin/developers/{id}` | `{ "status": "ACTIVE" \\| "DISABLED" }` 启停 |
+| `POST /api/admin/developers/{id}/reset-password` | 重置密码，明文仅在本次响应返回一次 |
+
+## 四、开发者接口
+
+开发者登录使用独立 Cookie（`appstore_dev_session`），与管理员会话互不通用；所有接口只能操作归属自己的应用。
+
+| 方法与路径 | 说明 |
+|---|---|
+| `POST /api/dev/login` | `{ "username", "password" }`，失败限流同管理员 |
+| `POST /api/dev/logout` / `POST /api/dev/password` | 登出 / 修改自己的密码 |
+| `GET/POST /api/dev/apps` | 我的应用列表 / 创建应用（归属自动写入） |
+| `GET/PUT /api/dev/apps/{id}` | 应用详情与版本记录 / 更新基础资料 |
+| `POST /api/dev/apps/{id}/releases` | 二进制流上传 APK，解析成功后自动发布为当前版本 |
+| `POST /api/dev/apps/{id}/icon`、`POST/DELETE .../screenshots` | 图标与截图管理 |
+| `POST /api/dev/releases/{id}/set-current` / `archive` | 切换当前版本 / 归档 |
+| `DELETE /api/dev/releases/{id}` | 删除历史版本（当前版本禁止） |
 
 上传示例：
 

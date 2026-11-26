@@ -38,5 +38,8 @@ export const MAX_SCREENSHOT_BYTES = 5 * 1024 * 1024;
 /** 登录失败限流：窗口内最多尝试次数与窗口长度 */
 export const LOGIN_RATE_LIMIT = { maxFailures: 5, windowMs: 5 * 60 * 1000 };
 
+/** 更新检查接口限流：单 IP 每分钟最多请求次数 */
+export const UPDATE_CHECK_RATE_LIMIT = { maxRequests: 120, windowMs: 60 * 1000 };
+
 /** 详情页返回的历史版本条数上限 */
 export const MAX_RELEASES_IN_DETAIL = 20;

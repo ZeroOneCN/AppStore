@@ -131,6 +131,7 @@ describe("版本服务", () => {
     const forced = await evaluateUpdate(PACKAGE_NAME, 7);
     expect(forced.hasUpdate).toBe(true);
     expect(forced.forceUpdate).toBe(true);
+    expect(forced.latest?.minSupportedVersionCode).toBe(8);
 
     const optional = await evaluateUpdate(PACKAGE_NAME, 8);
     expect(optional.hasUpdate).toBe(true);
