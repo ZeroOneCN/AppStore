@@ -248,3 +248,12 @@ HTTP 冒烟实测明细（种子数据：`smoke-pack`，真实 APK 4026 版，�
 | 爱健身图标 | 通过 | 提取结果 512×512、97,285 字节，蓝色渐变 + 白色肌肉线条，已通过图标接口补齐（`iconUrl=/api/assets/icons/cmww2f1mh00038fbgtgiytzcm.png`） |
 | LifeOS 发布 | 通过 | 上传 `LifeOS-1.0.0-2010.apk`（63.5 MB，versionCode 2010，包名 `com.lifeos.mobile`）并发布为当前版本；图标 512×512、34,429 字节（白底红色层叠图形） |
 | 验证 | 通过 | 公开列表 5 个应用图标均返回 200 image/png；`/api/public/apps/lifeos` 当前版本 1.0.0 (2010)；`typecheck` / `lint` / `test` 47/47 / `build` 全部通过 |
+
+### 品牌 LOGO 更新（B12）
+
+| 项目 | 结果 | 证据 |
+|---|---|---|
+| 图形规范 | 通过 | 按 brand-icon-system 令牌生成：256×256 画布、圆角 56（22%）、白底 146° 渐变（`#FFFFFF → #F3F8FD → #E9F1FA`）、1px `#DCE5F1` 描边、图形占 92% |
+| 图形 | 通过 | 使用 `store` 预设（应用商店图形），渐变 `#64C1F7 → #2E93E4 → #1A6DBC`，等比居中不裁切 |
+| 落地 | 通过 | 更新 `public/logo.svg` 与 `src/app/icon.svg`；页头、登录页、错误页、PWA 清单共用新图标 |
+| 验证 | 通过 | `/logo.svg`、`/icon.svg` 均返回 200 且包含新渐变；`npm run build` 通过 |
