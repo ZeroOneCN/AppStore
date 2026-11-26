@@ -6,6 +6,12 @@ import { AppError } from "../infra/errors";
 import { logger } from "../infra/logger";
 import { resolveStoredPath } from "../infra/paths";
 import { assertZipMagic, parseApk, streamApkToTemp } from "./apk.service";
+import {
+  loadStagedUpload,
+  promoteStagedApk,
+  readStagedIcon,
+  removeStagedUpload,
+} from "./apk-staging.service";
 import { updateAppIcon } from "./app.service";
 import {
   assertVersionAvailable,
@@ -22,13 +28,17 @@ export interface UploadReleaseInput {
   app: App;
   /** 上传者标记：admin 或 dev:<username> */
   actor: string;
-  /** 二进制请求体 */
-  body: ReadableStream<Uint8Array>;
+  /** 二进制请求体；与 stagedToken 二选一 */
+  body?: ReadableStream<Uint8Array>;
+  /** 步骤一暂存上传得到的 token，用于步骤三直接提交 */
+  stagedToken?: string;
   changelog: string;
   /** 上传成功后是否立即发布为当前版本 */
   autoPublish?: boolean;
   /** 版本号已存在时是否用本次安装包覆盖 */
   overwrite?: boolean;
+  /** 选择的图标 ID；空字符串表示保留原图标，缺省使用默认最高清图标 */
+  iconId?: string | null;
 }
 
 /** 上传结果 */
@@ -54,21 +64,34 @@ interface FileBackup {
 }
 
 /**
- * 上传 APK：流式落盘 → 解析 → 存储版本记录 →（可选）立即发布 → 补应用图标。
+ * 上传 APK：流式落盘或读取暂存会话 → 校验 → 存储版本记录 →（可选）立即发布 → 更新应用图标。
  * 版本号已存在时：勾选覆盖则替换文件与包信息并保留版本 ID，否则返回版本冲突。
  * 任一环节失败时清理已落盘文件并还原被覆盖的旧安装包。
- * @param input 应用、上传者、请求体、更新日志、是否自动发布与是否覆盖同版本号
+ * @param input 应用、上传者、请求体或暂存 token、更新日志、发布/覆盖选项与图标选择
  * @returns 版本记录、解析结果与是否覆盖
  * @throws AppError 应用类型不符、文件非法、版本冲突、发布失败时抛出
  */
 export async function uploadApkRelease(input: UploadReleaseInput): Promise<UploadReleaseResult> {
-  const { app, actor, body, changelog, autoPublish = false, overwrite = false } = input;
+  const {
+    app,
+    actor,
+    body,
+    stagedToken,
+    changelog,
+    autoPublish = false,
+    overwrite = false,
+    iconId,
+  } = input;
+
   if (app.type !== "ANDROID") {
     throw new AppError("VALIDATION_FAILED", "网页作品不支持上传安装包");
   }
 
-  const { maxApkMb } = await getSiteSettings();
-  const maxBytes = maxApkMb * 1024 * 1024;
+  const staged = stagedToken ? await loadStagedUpload(stagedToken) : null;
+  if (staged && staged.actor !== actor) {
+    throw new AppError("FORBIDDEN", "上传会话不属于当前账号，请重新选择安装包");
+  }
+
   let tempPath: string | null = null;
   let storedPath: string | null = null;
   /** 本次新建的草稿 ID，失败时用于回滚数据库记录 */
@@ -77,14 +100,36 @@ export async function uploadApkRelease(input: UploadReleaseInput): Promise<Uploa
   let fileBackup: FileBackup | null = null;
 
   try {
-    const uploaded = await streamApkToTemp(
-      Readable.fromWeb(body as unknown as import("node:stream/web").ReadableStream),
-      maxBytes,
-    );
-    tempPath = uploaded.tempPath;
+    let parsed: {
+      packageName: string;
+      versionCode: number;
+      versionName: string;
+      minSdk: number | null;
+      signFingerprint: string | null;
+      iconBuffer: Buffer | null;
+    };
+    let fileSize: number;
+    let sha256: string;
 
-    await assertZipMagic(tempPath);
-    const parsed = await parseApk(tempPath);
+    if (staged) {
+      parsed = { ...staged.parsed, iconBuffer: null };
+      fileSize = staged.fileSize;
+      sha256 = staged.sha256;
+    } else {
+      if (!body) {
+        throw new AppError("VALIDATION_FAILED", "缺少安装包内容，请重新上传");
+      }
+      const { maxApkMb } = await getSiteSettings();
+      const uploaded = await streamApkToTemp(
+        Readable.fromWeb(body as unknown as import("node:stream/web").ReadableStream),
+        maxApkMb * 1024 * 1024,
+      );
+      tempPath = uploaded.tempPath;
+      await assertZipMagic(tempPath);
+      parsed = await parseApk(tempPath);
+      fileSize = uploaded.fileSize;
+      sha256 = uploaded.sha256;
+    }
 
     // 覆盖模式下先查询同版本号记录；普通模式沿用唯一性校验并提示覆盖入口
     const existing = overwrite
@@ -113,16 +158,23 @@ export async function uploadApkRelease(input: UploadReleaseInput): Promise<Uploa
       if (copied) fileBackup = { backupPath, targetPath };
     }
 
-    storedPath = await moveApkToFinal(tempPath, app.id, parsed.versionCode);
-    tempPath = null;
+    if (staged) {
+      storedPath = await promoteStagedApk(staged, app.id, parsed.versionCode);
+    } else {
+      if (!tempPath) {
+        throw new AppError("VALIDATION_FAILED", "缺少安装包内容，请重新上传");
+      }
+      storedPath = await moveApkToFinal(tempPath, app.id, parsed.versionCode);
+      tempPath = null;
+    }
 
     if (existing) {
       resultRelease = await overwriteRelease({
         releaseId: existing.id,
         versionName: parsed.versionName,
         filePath: storedPath,
-        fileSize: uploaded.fileSize,
-        sha256: uploaded.sha256,
+        fileSize,
+        sha256,
         signFingerprint: parsed.signFingerprint,
         minSdk: parsed.minSdk,
         changelog,
@@ -142,8 +194,8 @@ export async function uploadApkRelease(input: UploadReleaseInput): Promise<Uploa
         minSdk: parsed.minSdk,
         signFingerprint: parsed.signFingerprint,
         filePath: storedPath,
-        fileSize: uploaded.fileSize,
-        sha256: uploaded.sha256,
+        fileSize,
+        sha256,
         uploadedBy: actor,
         changelog,
       });
@@ -160,18 +212,34 @@ export async function uploadApkRelease(input: UploadReleaseInput): Promise<Uploa
       fileBackup = null;
     }
 
+    // 图标：显式选择则用所选，缺省用本次 APK 的最高清图标；空字符串表示保留原图标
+    let iconBuffer: Buffer | null = null;
+    if (iconId !== "") {
+      if (staged) {
+        iconBuffer =
+          (await readStagedIcon(staged, iconId ?? null)) ??
+          (await readStagedIcon(staged, staged.icons[0]?.id ?? null));
+      } else {
+        iconBuffer = parsed.iconBuffer;
+      }
+    }
+
     let iconSaved = false;
-    if (!app.iconPath && parsed.iconBuffer) {
+    if (iconBuffer) {
       try {
-        await updateAppIcon(app.id, await saveIcon(parsed.iconBuffer, app.id));
+        await updateAppIcon(app.id, await saveIcon(iconBuffer, app.id));
         iconSaved = true;
       } catch (error) {
         // 图标保存失败不影响版本创建
-        logger.warn("APK 内置图标保存失败", {
+        logger.warn("APK 图标保存失败", {
           appId: app.id,
           error: error instanceof Error ? error.message : String(error),
         });
       }
+    }
+
+    if (staged) {
+      await removeStagedUpload(staged.token);
     }
 
     return {
@@ -182,7 +250,7 @@ export async function uploadApkRelease(input: UploadReleaseInput): Promise<Uploa
         versionName: parsed.versionName,
         minSdk: parsed.minSdk,
         signFingerprint: parsed.signFingerprint,
-        iconBytes: parsed.iconBuffer?.byteLength ?? 0,
+        iconBytes: iconBuffer?.byteLength ?? 0,
       },
       iconSaved,
       overwritten: Boolean(existing),

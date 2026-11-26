@@ -5,7 +5,6 @@ import { useState } from "react";
 import { HelpTip } from "./help-tip";
 import type { AdminAppData } from "./types";
 import { generateSlug } from "@/lib/slug";
-import { checkApkFile } from "@/lib/apk-file";
 import { errorMessageOf, inputClass, labelClass, primaryButtonClass } from "./ui";
 
 /** 表单内部状态 */
@@ -25,42 +24,7 @@ interface FormState {
 }
 
 /**
- * 以 XMLHttpRequest 提交 multipart 表单，并实时回调上传进度。
- * fetch 目前无法获取上传进度，故使用 XHR 的 upload.onprogress。
- * @param url 接口地址
- * @param data 表单数据
- * @param onProgress 上传进度回调，参数为 0-100 的整数
- * @returns 是否成功与已解析的响应数据
- */
-function postFormWithProgress(
-  url: string,
-  data: FormData,
-  onProgress: (percent: number) => void,
-): Promise<{ ok: boolean; data: unknown }> {
-  return new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    xhr.open("POST", url);
-    xhr.upload.onprogress = (event) => {
-      if (event.lengthComputable) {
-        onProgress(Math.round((event.loaded / event.total) * 100));
-      }
-    };
-    xhr.onload = () => {
-      let parsed: unknown = null;
-      try {
-        parsed = xhr.responseText ? JSON.parse(xhr.responseText) : null;
-      } catch {
-        parsed = null;
-      }
-      resolve({ ok: xhr.status >= 200 && xhr.status < 300, data: parsed });
-    };
-    xhr.onerror = () => reject(new Error("network"));
-    xhr.send(data);
-  });
-}
-
-/**
- * 应用新建 / 编辑表单。
+ * 应用编辑表单（新建时仅创建基础信息，上传安装包请使用三步向导）。
  * @param props.mode 表单模式
  * @param props.app 编辑模式下的初始数据
  * @param props.categories 已有分类，用于输入候选项
@@ -110,13 +74,6 @@ export function AppForm({
   const [notice, setNotice] = useState<string | null>(null);
   // 新建时访问标识默认跟随名称自动生成，手动修改后不再覆盖
   const [slugTouched, setSlugTouched] = useState(mode === "edit");
-  // 新建时可直接选择 APK，一次提交创建应用并上传首个版本
-  const [apkFile, setApkFile] = useState<File | null>(null);
-  const [apkNote, setApkNote] = useState("");
-  // 安装包上传进度（0-100），null 表示未在上传
-  const [apkProgress, setApkProgress] = useState<number | null>(null);
-  // 重置安装包选择框用的 key，校验失败时强制重新选择
-  const [apkInputKey, setApkInputKey] = useState(0);
 
   /**
    * 更新单个表单字段。
@@ -175,18 +132,6 @@ export function AppForm({
     event.preventDefault();
     setError(null);
     setNotice(null);
-
-    // 先校验安装包完整性，避免上传几十 MB 后才在服务端解析失败
-    if (mode === "create" && apkFile && form.type === "ANDROID") {
-      const invalid = await checkApkFile(apkFile);
-      if (invalid) {
-        // 清空已选文件并重置输入框，避免继续使用可能已过期的文件快照
-        setError(invalid);
-        setApkFile(null);
-        setApkInputKey((key) => key + 1);
-        return;
-      }
-    }
     setSaving(true);
 
     const payload: Record<string, unknown> = {
@@ -211,32 +156,12 @@ export function AppForm({
     payload.visibility = form.visibility;
 
     try {
-      let result: { ok: boolean; data: unknown };
-      if (mode === "create" && apkFile && form.type === "ANDROID") {
-        const data = new FormData();
-        data.append("slug", String(payload.slug));
-        data.append("name", String(payload.name));
-        data.append("summary", String(payload.summary));
-        data.append("description", form.description);
-        data.append("category", String(payload.category));
-        data.append("tags", JSON.stringify(payload.tags ?? []));
-        data.append("visibility", form.visibility);
-        data.append("changelog", apkNote.trim());
-        if (showAdminFields) {
-          data.append("pinned", String(form.pinned));
-          data.append("developerId", form.developerId);
-        }
-        data.append("apk", apkFile);
-        setApkProgress(0);
-        result = await postFormWithProgress(`${apiBase}/with-apk`, data, setApkProgress);
-      } else {
-        const response = await fetch(mode === "create" ? apiBase : `${apiBase}/${app?.id}`, {
-          method: mode === "create" ? "POST" : "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        result = { ok: response.ok, data: await response.json().catch(() => null) };
-      }
+      const response = await fetch(mode === "create" ? apiBase : `${apiBase}/${app?.id}`, {
+        method: mode === "create" ? "POST" : "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const result = { ok: response.ok, data: await response.json().catch(() => null) };
 
       if (!result.ok) {
         setError(errorMessageOf(result.data, "保存失败，请检查填写内容"));
@@ -268,7 +193,6 @@ export function AppForm({
     } catch {
       setError("网络异常，请检查连接后重试");
     } finally {
-      setApkProgress(null);
       setSaving(false);
     }
   }
@@ -439,13 +363,7 @@ export function AppForm({
             <button
               key={option.value}
               type="button"
-              onClick={() => {
-                update("type", option.value);
-                if (option.value === "WEB") {
-                  setApkFile(null);
-                  setApkNote("");
-                }
-              }}
+              onClick={() => update("type", option.value)}
               className={`rounded-xl border px-3.5 py-2 text-sm transition ${
                 form.type === option.value
                   ? "border-indigo-500 bg-indigo-50 text-indigo-700 dark:border-indigo-500 dark:bg-indigo-500/15 dark:text-indigo-300"
@@ -459,66 +377,21 @@ export function AppForm({
 
         {form.type === "ANDROID" ? (
           <div className="grid gap-4">
-            {mode === "create" ? (
-              <div>
-                <label htmlFor="apk" className={labelClass}>
-                  安装包
-                  <HelpTip text="新建时可直接选择 APK：提交后自动解析包名、版本号并发布为首个版本；也可以不上传，先创建空应用。" />
-                </label>
-                <input
-                  key={apkInputKey}
-                  id="apk"
-                  type="file"
-                  accept=".apk,application/vnd.android.package-archive"
-                  onChange={(event) => setApkFile(event.target.files?.[0] ?? null)}
-                  className="block w-full cursor-pointer rounded-xl border border-black/10 bg-white px-3 py-2 text-sm text-neutral-600 transition file:mr-3 file:rounded-lg file:border-0 file:bg-brand/10 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-brand hover:border-brand/30"
-                />
-                <p className="mt-1.5 text-[11px] leading-5 text-neutral-500 dark:text-neutral-400">
-                  {apkFile
-                    ? `已选择 ${apkFile.name}（${(apkFile.size / 1024 / 1024).toFixed(1)} MB），包名与版本号将在提交时自动读取`
-                    : "可选：选择 APK 后一次提交即可完成创建与首个版本发布；不上传则先创建空应用"}
-                </p>
-              </div>
-            ) : null}
-
-            {apkFile ? (
-              <>
-                <div className="rounded-xl bg-brand/[0.06] px-3.5 py-3 text-xs leading-5 text-neutral-600">
-                  安装包已就绪，包名与版本号将从 APK 自动读取，无需手动填写。
-                </div>
-                <div>
-                  <label htmlFor="apkNote" className={labelClass}>
-                    版本更新说明
-                    <HelpTip text="会作为首个版本的更新日志，展示在版本历史与版本详情中。" />
-                  </label>
-                  <textarea
-                    id="apkNote"
-                    rows={3}
-                    maxLength={1000}
-                    value={apkNote}
-                    onChange={(event) => setApkNote(event.target.value)}
-                    className={inputClass}
-                    placeholder="例如：首个版本，支持应用浏览与更新检查"
-                  />
-                </div>
-              </>
-            ) : (
-              <div>
-                <label htmlFor="packageName" className={labelClass}>
-                  Android 包名
-                  <HelpTip text="必须与 APK 内的包名完全一致，用于上传校验与更新检测。也可以直接选择安装包，由系统自动解析。" />
-                </label>
-                <input
-                  id="packageName"
-                  required
-                  maxLength={128}
-                  value={form.packageName}
-                  onChange={(event) => update("packageName", event.target.value)}
-                  className={inputClass}
-                  placeholder="例如：com.example.myapp"
-                />
-              </div>
-            )}
+            <div>
+              <label htmlFor="packageName" className={labelClass}>
+                Android 包名
+                <HelpTip text="必须与 APK 内的包名完全一致，用于上传校验与更新检测；上传安装包会由系统自动解析。" />
+              </label>
+              <input
+                id="packageName"
+                required
+                maxLength={128}
+                value={form.packageName}
+                onChange={(event) => update("packageName", event.target.value)}
+                className={inputClass}
+                placeholder="例如：com.example.myapp"
+              />
+            </div>
           </div>
         ) : (
           <div>
@@ -609,41 +482,14 @@ export function AppForm({
 
       <div className="flex items-center gap-3">
         <button type="submit" disabled={saving} className={primaryButtonClass}>
-          {saving
-            ? apkFile && mode === "create"
-              ? "创建并上传中…"
-              : "保存中…"
-            : mode === "create"
-              ? apkFile
-                ? "创建并上传"
-                : "创建应用"
-              : "保存修改"}
+          {saving ? "保存中…" : mode === "create" ? "创建应用" : "保存修改"}
         </button>
         {mode === "create" ? (
           <span className="text-xs text-neutral-500 dark:text-neutral-400">
-            {apkFile
-              ? "提交后自动创建应用、解析包名并发布首个版本"
-              : "选择安装包可一步完成创建与上传"}
+            创建后可在详情页通过三步向导上传并发布版本
           </span>
         ) : null}
       </div>
-
-      {apkProgress !== null ? (
-        <div className="space-y-1.5" role="status" aria-live="polite">
-          <div className="flex items-center justify-between gap-3 text-xs text-neutral-500 dark:text-neutral-400">
-            <span>
-              {apkProgress >= 100 ? "上传完成，正在解析并创建应用…" : "正在上传安装包…"}
-            </span>
-            <span className="tabular-nums">{apkProgress}%</span>
-          </div>
-          <div className="h-2 overflow-hidden rounded-full bg-neutral-100 dark:bg-neutral-800">
-            <div
-              className="h-full rounded-full bg-brand transition-[width] duration-300 ease-out"
-              style={{ width: `${Math.max(apkProgress, 4)}%` }}
-            />
-          </div>
-        </div>
-      ) : null}
     </form>
   );
 }

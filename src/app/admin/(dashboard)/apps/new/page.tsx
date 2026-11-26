@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
-import { AppForm } from "@/components/admin/app-form";
+import { AppCreateWizard } from "@/components/admin/app-create-wizard";
 import { PageHeader } from "@/components/page-header";
 import { listAdminFacets } from "@/server/services/app.service";
 import { listDevelopers } from "@/server/services/developer.service";
@@ -26,10 +26,9 @@ async function NewAppContent() {
       </Link>
       <PageHeader
         title="新建应用"
-        description="先填写基础信息，可直接选择 APK 一步完成创建与首个版本发布"
+        description="按三步完成：上传解析安装包 → 填写应用内容与图标 → 创建并发布"
       />
-      <AppForm
-        mode="create"
+      <AppCreateWizard
         categories={facets.categories}
         tagOptions={facets.tags}
         developerOptions={developers.map((developer) => ({

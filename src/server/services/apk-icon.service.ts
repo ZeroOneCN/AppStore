@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { createRequire } from "node:module";
 import sharp from "sharp";
 import yauzl from "yauzl";
@@ -763,14 +764,51 @@ async function renderIconEntry(
   return null;
 }
 
+/** APK 内可选的图标候选 */
+export interface ApkIconCandidate {
+  /** 内容哈希，用作稳定标识 */
+  id: string;
+  /** 展示标签，如“xxxhdpi 超高清 图标” */
+  label: string;
+  /** 512×512 PNG 内容 */
+  buffer: Buffer;
+  /** 来源密度权重，数值越大越清晰 */
+  weight: number;
+}
+
+/** 密度目录对应的中文标签 */
+const DENSITY_LABEL: Record<string, string> = {
+  ldpi: "ldpi 低清",
+  mdpi: "mdpi 标清",
+  hdpi: "hdpi 高清",
+  xhdpi: "xhdpi 高清",
+  xxhdpi: "xxhdpi 超清",
+  xxxhdpi: "xxxhdpi 极清",
+  nodpi: "固定密度",
+  anydpi: "任意密度",
+};
+
 /**
- * 从 APK 中提取图标，兼容位图、矢量图与自适应图标。
- * 优先读取 AndroidManifest 中的图标资源（可兼容混淆资源名的 Flutter 包），
- * 再回退到按 ic_launcher 命名扫描；矢量图标会转换为 SVG 后栅格化为 PNG。
- * @param filePath APK 绝对路径
- * @returns 512×512 PNG 图标；无法识别时返回 null
+ * 生成图标候选的可读标签。
+ * @param name APK 内资源路径
+ * @returns 标签文本
  */
-export async function extractIconFromApk(filePath: string): Promise<Buffer | null> {
+function iconCandidateLabel(name: string): string {
+  const match = /res\/[^/]*-([a-z]+)(?:-v\d+)?\//.exec(name);
+  const density = match ? DENSITY_LABEL[match[1]] : "";
+  if (isXml(name)) {
+    return density ? `矢量/自适应（${density}）` : "矢量/自适应图标";
+  }
+  return density ? `${density} 图标` : "默认图标";
+}
+
+/**
+ * 从 APK 中提取全部图标候选，兼容位图、矢量图与自适应图标。
+ * 清单声明的图标优先，其次按 ic_launcher 等命名扫描；相同渲染结果自动去重。
+ * @param filePath APK 绝对路径
+ * @returns 512×512 PNG 候选列表，按清晰度降序；无法识别时返回空数组
+ */
+export async function extractIconCandidates(filePath: string): Promise<ApkIconCandidate[]> {
   try {
     const entries = await listZipEntries(filePath);
 
@@ -779,35 +817,85 @@ export async function extractIconFromApk(filePath: string): Promise<Buffer | nul
     const bootstrapFiles = await readZipEntries(filePath, bootstrap);
     const map = loadResourceMap(bootstrapFiles.get("resources.arsc"));
 
-    // 方案一：AndroidManifest 中声明的图标资源（兼容资源名混淆）
+    // 清单声明的图标（icon / roundIcon）优先，其次按命名扫描
+    const names: string[] = [];
     const manifest = bootstrapFiles.get("AndroidManifest.xml");
     for (const reference of manifest ? readApplicationIconRefs(manifest) : []) {
-      const candidates = sortIconCandidates(
-        resolveValues(reference, map, entries).filter(isResourcePath),
-        entries,
+      names.push(
+        ...sortIconCandidates(
+          resolveValues(reference, map, entries).filter(isResourcePath),
+          entries,
+        ),
       );
-      for (const name of candidates.slice(0, 4)) {
-        const icon = await renderIconEntry(filePath, name, map, entries);
-        if (icon) return icon;
-      }
     }
-
-    // 方案二：按 ic_launcher 等命名扫描（覆盖清单未声明图标的包）
-    const named = sortIconCandidates(
-      [...entries.keys()].filter(
-        (name) =>
-          /^res\/(mipmap|drawable)[^/]*\//i.test(name) &&
-          ICON_BASENAME.test(name.split("/").pop() ?? ""),
+    names.push(
+      ...sortIconCandidates(
+        [...entries.keys()].filter(
+          (name) =>
+            /^res\/(mipmap|drawable)[^/]*\//i.test(name) &&
+            ICON_BASENAME.test(name.split("/").pop() ?? ""),
+        ),
+        entries,
       ),
-      entries,
     );
 
-    for (const name of named.slice(0, 4)) {
-      const icon = await renderIconEntry(filePath, name, map, entries);
-      if (icon) return icon;
+    const seenNames = new Set<string>();
+    const seenBuffers = new Set<string>();
+    const candidates: ApkIconCandidate[] = [];
+
+    for (const name of names) {
+      if (seenNames.has(name)) continue;
+      seenNames.add(name);
+      if (seenNames.size > 24 || candidates.length >= 12) break;
+
+      const buffer = await renderIconEntry(filePath, name, map, entries);
+      if (!buffer) continue;
+
+      const id = createHash("sha1").update(buffer).digest("hex").slice(0, 16);
+      if (seenBuffers.has(id)) continue;
+      seenBuffers.add(id);
+
+      candidates.push({
+        id,
+        label: iconCandidateLabel(name),
+        buffer,
+        weight: densityWeight(name),
+      });
     }
 
-    return null;
+    const sorted = candidates.sort((a, b) => b.weight - a.weight);
+    return sorted.map((candidate, index) => ({
+      ...candidate,
+      label:
+        index === 0
+          ? `${candidate.label}（推荐）`
+          : candidate.label === "默认图标"
+            ? `图标 ${index + 1}`
+            : `${candidate.label} ${index + 1}`,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * 从 APK 中提取默认图标（清晰度最高的一张）。
+ * @param filePath APK 绝对路径
+ * @returns 512×512 PNG 图标；无法识别时返回 null
+ */
+export async function extractIconFromApk(filePath: string): Promise<Buffer | null> {
+  const candidates = await extractIconCandidates(filePath);
+  return candidates[0]?.buffer ?? null;
+}
+
+/**
+ * 将任意图片缓冲统一转换为 512×512 PNG，用于解析器兜底图标。
+ * @param buffer 原始图片
+ * @returns PNG 缓冲；无法解码时返回 null
+ */
+export async function normalizeIconBuffer(buffer: Buffer): Promise<Buffer | null> {
+  try {
+    return await sharp(buffer).resize(ICON_SIZE, ICON_SIZE, { fit: "cover" }).png().toBuffer();
   } catch {
     return null;
   }

@@ -7,7 +7,12 @@ import AppInfoParser from "app-info-parser";
 import forge from "node-forge";
 import yauzl from "yauzl";
 import { AppError } from "../infra/errors";
-import { extractIconFromApk, isSupportedImage } from "./apk-icon.service";
+import {
+  extractIconCandidates,
+  isSupportedImage,
+  normalizeIconBuffer,
+  type ApkIconCandidate,
+} from "./apk-icon.service";
 import { createTempApkPath } from "./storage.service";
 
 /** APK 文件头（ZIP 本地文件头），用于快速判别非安装包 */
@@ -23,8 +28,10 @@ export interface ParsedApk {
   versionName: string;
   /** 最低系统版本 */
   minSdk: number | null;
-  /** 图标二进制，缺失时为 null（不阻断发布） */
+  /** 默认图标（候选列表第一张），缺失时为 null（不阻断发布） */
   iconBuffer: Buffer | null;
+  /** APK 内全部可选图标，按清晰度降序 */
+  icons: ApkIconCandidate[];
   /** 签名证书 SHA-256 指纹，解析失败时为 null */
   signFingerprint: string | null;
 }
@@ -342,16 +349,21 @@ export async function parseApk(filePath: string): Promise<ParsedApk> {
 
   // 优先使用专门的图标解析（支持矢量图/自适应图标），解析器自带图标仅作兜底
   const rawIcon = decodeIcon(info.icon) ?? decodeIcon(info.application?.icon);
-  const iconBuffer =
-    (await extractIconFromApk(filePath)) ??
-    (rawIcon && isSupportedImage(rawIcon) ? rawIcon : null);
+  const icons = await extractIconCandidates(filePath);
+  if (icons.length === 0 && rawIcon && isSupportedImage(rawIcon)) {
+    const normalized = await normalizeIconBuffer(rawIcon);
+    if (normalized) {
+      icons.push({ id: "parser", label: "解析器提取", buffer: normalized, weight: 0 });
+    }
+  }
 
   return {
     packageName,
     versionCode,
     versionName,
     minSdk: Number.isFinite(minSdkValue) ? minSdkValue : null,
-    iconBuffer,
+    iconBuffer: icons[0]?.buffer ?? null,
+    icons,
     signFingerprint: await extractSignFingerprint(filePath),
   };
 }

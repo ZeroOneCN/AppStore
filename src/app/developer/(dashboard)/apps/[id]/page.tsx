@@ -202,7 +202,7 @@ async function DeveloperAppContent({
             appType={app.type}
             releases={releaseData}
             apiBase="/api/dev"
-            defaultPublish
+            appIconUrl={app.iconUrl}
             showDownload
           />
         </section>

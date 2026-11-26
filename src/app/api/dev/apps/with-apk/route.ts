@@ -1,4 +1,4 @@
-import { readAppWithApkForm, parseFormTags } from "@/server/http/app-upload-form";
+import { z } from "zod";
 import { devAppCreateSchema } from "@/server/http/dev-app-schema";
 import { assertSameOrigin } from "@/server/http/origin";
 import { requireDeveloper } from "@/server/http/session";
@@ -7,35 +7,57 @@ import { logAudit } from "@/server/services/audit.service";
 import { createAppWithApk } from "@/server/services/create-with-apk.service";
 import { createDeveloperApp } from "@/server/services/developer.service";
 
+/** 步骤三：用暂存 APK 创建应用的参数 */
+const stagedCreateSchema = z.object({
+  token: z.string().min(1, "缺少上传会话"),
+  slug: z.string().optional().default(""),
+  name: z.string().optional().default(""),
+  summary: z.string().optional().default(""),
+  description: z.string().optional().default(""),
+  category: z.string().optional().default(""),
+  tags: z.array(z.string()).optional().default([]),
+  visibility: z.enum(["PUBLIC", "PRIVATE"]).optional().default("PUBLIC"),
+  changelog: z.string().max(2000).optional().default(""),
+  iconId: z.string().max(64).nullable().optional(),
+});
+
 /**
- * 开发者一步创建应用并上传首个 APK 版本。
- * 表单字段：应用信息 + apk 文件 + changelog。
- * @param request HTTP 请求
+ * 步骤三：开发者用暂存安装包创建应用并发布首个版本。
+ * @param request JSON 请求
  * @returns 新应用与版本信息
  */
 export async function POST(request: Request): Promise<Response> {
   try {
     assertSameOrigin(request);
     const session = await requireDeveloper();
-    const { values, apk } = await readAppWithApkForm(request);
-    const tags = parseFormTags(values.tags);
+
+    const body = await request.json().catch(() => null);
+    const parsedBody = stagedCreateSchema.safeParse(body);
+    if (!parsedBody.success) {
+      throw new AppError(
+        "VALIDATION_FAILED",
+        parsedBody.error.issues[0]?.message ?? "提交参数不合法",
+      );
+    }
+    const values = parsedBody.data;
 
     const result = await createAppWithApk({
       actor: `dev:${session.username}`,
-      body: apk.stream() as unknown as ReadableStream<Uint8Array>,
+      token: values.token,
       changelog: values.changelog,
+      iconId: values.iconId,
       createApp: async (packageName) => {
         const parsed = devAppCreateSchema.safeParse({
-          slug: values.slug ?? "",
-          name: values.name ?? "",
-          summary: values.summary ?? "",
+          slug: values.slug,
+          name: values.name,
+          summary: values.summary,
           description: values.description || undefined,
           type: "ANDROID",
-          category: values.category ?? "",
-          tags,
+          category: values.category,
+          tags: values.tags,
           webUrl: null,
           packageName,
-          visibility: values.visibility === "PRIVATE" ? "PRIVATE" : "PUBLIC",
+          visibility: values.visibility,
         });
         if (!parsed.success) {
           throw new AppError(

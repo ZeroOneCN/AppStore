@@ -1,19 +1,19 @@
 import type { App } from "@prisma/client";
-import fs from "node:fs/promises";
-import { Readable } from "node:stream";
 import { prisma } from "../db";
-import { assertZipMagic, parseApk, streamApkToTemp } from "./apk.service";
+import { AppError } from "../infra/errors";
+import { loadStagedUpload } from "./apk-staging.service";
 import { uploadApkRelease, type UploadReleaseResult } from "./release-upload.service";
-import { getSiteSettings } from "./settings.service";
 
-/** 创建应用并上传安装包的输入 */
+/** 使用暂存安装包创建应用的输入 */
 export interface CreateAppWithApkInput {
   /** 审计标记：admin 或 dev:<username> */
   actor: string;
-  /** APK 二进制流 */
-  body: ReadableStream<Uint8Array>;
+  /** 步骤一暂存上传得到的 token */
+  token: string;
   /** 版本更新说明 */
   changelog?: string;
+  /** 选择的图标 ID；空字符串表示不设置图标 */
+  iconId?: string | null;
   /**
    * 使用解析出的包名创建应用，返回新应用记录。
    * 由调用方根据角色选择管理员或开发者创建逻辑。
@@ -22,41 +22,30 @@ export interface CreateAppWithApkInput {
 }
 
 /**
- * 一步创建应用并上传首个 APK 版本：
- * 先落盘解析包名，再创建应用，最后复用上传服务写入版本并自动发布。
- * 中途失败会删除已创建的应用与临时文件，避免留下空应用。
- * @param input 上传者、请求体、更新说明与创建回调
+ * 用暂存 APK 创建应用并发布首个版本：
+ * 从暂存会话读取包名创建应用，再复用上传服务落盘并发布。
+ * 中途失败会删除已创建的应用，暂存会话保留以便重试提交。
+ * @param input 上传者、暂存 token、更新说明与创建回调
  * @returns 新应用与上传结果
  */
 export async function createAppWithApk(
   input: CreateAppWithApkInput,
 ): Promise<{ app: App; upload: UploadReleaseResult }> {
-  const { maxApkMb } = await getSiteSettings();
-  const maxBytes = maxApkMb * 1024 * 1024;
-  let tempPath: string | null = null;
+  const staged = await loadStagedUpload(input.token);
+  if (staged.actor !== input.actor) {
+    throw new AppError("FORBIDDEN", "上传会话不属于当前账号，请重新选择安装包");
+  }
+
   let app: App | null = null;
-
   try {
-    const uploaded = await streamApkToTemp(
-      Readable.fromWeb(input.body as unknown as import("node:stream/web").ReadableStream),
-      maxBytes,
-    );
-    tempPath = uploaded.tempPath;
-
-    await assertZipMagic(tempPath);
-    const parsed = await parseApk(tempPath);
-
-    app = await input.createApp(parsed.packageName);
-
-    const buffer = await fs.readFile(tempPath);
+    app = await input.createApp(staged.parsed.packageName);
     const upload = await uploadApkRelease({
       app,
       actor: input.actor,
-      body: Readable.toWeb(
-        Readable.from(buffer),
-      ) as unknown as ReadableStream<Uint8Array>,
+      stagedToken: input.token,
       changelog: input.changelog ?? "",
       autoPublish: true,
+      iconId: input.iconId,
     });
 
     return { app, upload };
@@ -66,9 +55,5 @@ export async function createAppWithApk(
       await prisma.app.delete({ where: { id: app.id } }).catch(() => undefined);
     }
     throw error;
-  } finally {
-    if (tempPath) {
-      await fs.rm(tempPath, { force: true }).catch(() => undefined);
-    }
   }
 }

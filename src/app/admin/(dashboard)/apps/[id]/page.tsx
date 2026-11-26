@@ -216,7 +216,7 @@ async function AdminAppContent({
             appId={app.id}
             appType={app.type}
             releases={releaseData}
-            defaultPublish
+            appIconUrl={app.iconUrl}
           />
         </section>
       ) : null}
