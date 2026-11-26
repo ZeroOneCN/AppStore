@@ -1,9 +1,10 @@
 import { originFromRequest } from "@/server/http/base-url";
+import { renderOpenApiHtml } from "./openapi-html";
 
 /**
- * 输出 OpenAPI 3.1 描述，供客户端接入与接口调试。
+ * 输出 OpenAPI 3.1 描述：浏览器访问时渲染可视化文档，工具请求返回 JSON。
  * @param request HTTP 请求，用于推导当前部署地址
- * @returns OpenAPI JSON
+ * @returns HTML 文档或 OpenAPI JSON
  */
 export async function GET(request: Request): Promise<Response> {
   const base = originFromRequest(request);
@@ -11,7 +12,7 @@ export async function GET(request: Request): Promise<Response> {
   const spec = {
     openapi: "3.1.0",
     info: {
-      title: "AppStore API",
+      title: "应用仓库 API",
       version: "1.0.0",
       description: "应用仓库的公开浏览、下载与更新检查接口，以及管理后台接口。",
     },
@@ -293,6 +294,19 @@ export async function GET(request: Request): Promise<Response> {
       },
     },
   };
+
+  const format = new URL(request.url).searchParams.get("format");
+  const accept = request.headers.get("accept") ?? "";
+  const wantsHtml = format !== "json" && (format === "html" || accept.includes("text/html"));
+
+  if (wantsHtml) {
+    return new Response(renderOpenApiHtml(spec as unknown as Record<string, unknown>, base), {
+      headers: {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "public, max-age=300",
+      },
+    });
+  }
 
   return Response.json(spec, {
     headers: { "Cache-Control": "public, max-age=300" },

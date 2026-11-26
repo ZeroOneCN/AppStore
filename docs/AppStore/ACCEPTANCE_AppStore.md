@@ -325,3 +325,12 @@ HTTP 冒烟实测明细（种子数据：`smoke-pack`，真实 APK 4026 版，�
 | 移除 Docker | 通过 | 删除 `Dockerfile`、`.dockerignore` 与 `BUILD_STANDALONE` 条件输出；DEPLOY 改为普通 `npm run build && npm start` |
 | 移除深浅色模式 | 通过 | 删除 `ThemeToggle`、首屏主题脚本，`html` 固定 `color-scheme: light`；浏览器验证页面无主题切换入口 |
 | 验证 | 通过 | `typecheck`、`lint`、`test`（58/58）、`build` 全部通过；开发者后台三项浏览器走查均通过 |
+
+### OpenAPI 可视化（B18）
+
+| 项目 | 结果 | 证据 |
+|---|---|---|
+| 内容协商 | 通过 | 浏览器（Accept: text/html）返回可视化文档；`curl` 默认与 `?format=json` 返回 OpenAPI 3.1 JSON |
+| 文档内容 | 通过 | 自动读取描述中的 tags 与 paths，渲染 18 个接口、3 个分组；展示参数、请求体字段、响应码与「需登录」标记 |
+| 视觉与交互 | 通过 | Hero、统计 chip、桌面固定目录、彩色方法徽标、代码复制按钮；浏览器验证桌面与 390px 均无页面级横向溢出 |
+| 验证 | 通过 | `typecheck`、`lint`、`build` 通过；桌面与响应式走查均 PASS |

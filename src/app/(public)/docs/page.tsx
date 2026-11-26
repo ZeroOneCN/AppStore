@@ -469,7 +469,7 @@ async function DocsContent({ embedded = false }: { embedded?: boolean }) {
               ["GET /api/public/apps/{slug}", "应用详情，含截图、当前版本与历史版本"],
               ["GET /api/public/apps/{slug}/releases", "应用已发布的版本列表"],
               ["GET /api/public/releases/{id}/download-ticket", "获取带时效签名的下载短链"],
-              ["GET /api/openapi", "完整的 OpenAPI 3.1 描述，可导入调试工具"],
+              ["GET /api/openapi", "可视化接口文档；加 ?format=json 获取 OpenAPI 3.1 描述"],
             ].map(([path, desc]) => (
               <div key={path} className="flex flex-col gap-1 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                 <code className="font-mono text-[12px] text-neutral-800 dark:text-neutral-200">{path}</code>
