@@ -40,6 +40,7 @@ const rowPrimaryButtonClass =
  * @param props.releases 版本列表
  * @param props.apiBase 接口前缀，默认管理员接口
  * @param props.appIconUrl 当前应用图标，用于图标选择时保留原图
+ * @param props.appUrl 应用前台页面地址，发布成功后可跳转
  * @param props.showDownload 是否展示下载按钮
  * @returns 版本管理界面
  */
@@ -49,6 +50,7 @@ export function ReleaseManager({
   releases,
   apiBase = "/api/admin",
   appIconUrl,
+  appUrl,
   showDownload = false,
 }: {
   appId: string;
@@ -56,6 +58,7 @@ export function ReleaseManager({
   releases: AdminReleaseData[];
   apiBase?: string;
   appIconUrl?: string | null;
+  appUrl?: string | null;
   showDownload?: boolean;
 }) {
   const router = useRouter();
@@ -168,6 +171,7 @@ export function ReleaseManager({
           apiBase={apiBase}
           releases={releases}
           appIconUrl={appIconUrl}
+          appUrl={appUrl}
           onDone={(message) => {
             setError(null);
             setNotice(message);

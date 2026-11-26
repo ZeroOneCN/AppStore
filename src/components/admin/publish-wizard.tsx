@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { checkApkFile } from "@/lib/apk-file";
 import { formatBytes } from "@/lib/format";
@@ -48,6 +49,7 @@ const STEP_LABELS: Array<{ step: WizardStep; title: string; hint: string }> = [
  * @param props.apiBase 接口前缀
  * @param props.releases 现有版本，用于提示同版本号覆盖
  * @param props.appIconUrl 当前应用图标，用于“保留原图标”选项
+ * @param props.appUrl 应用前台页面地址，发布成功后可跳转查看
  * @param props.onDone 发布完成后的回调，参数为提示文案
  * @returns 向导界面
  */
@@ -56,12 +58,14 @@ export function PublishWizard({
   apiBase = "/api/admin",
   releases,
   appIconUrl,
+  appUrl,
   onDone,
 }: {
   appId: string;
   apiBase?: string;
   releases: AdminReleaseData[];
   appIconUrl?: string | null;
+  appUrl?: string | null;
   onDone: (message: string) => void;
 }) {
   const [step, setStep] = useState<WizardStep>(1);
@@ -75,6 +79,12 @@ export function PublishWizard({
   const [overwrite, setOverwrite] = useState(false);
   const [submitting, setSubmitting] = useState<"publish" | "draft" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  /** 发布成功后的结果，用于展示完成提示与跳转入口 */
+  const [success, setSuccess] = useState<{
+    versionName: string;
+    versionCode: number;
+    publish: boolean;
+  } | null>(null);
 
   const conflict =
     staged !== null && releases.some((release) => release.versionCode === staged.parsed.versionCode);
@@ -94,6 +104,7 @@ export function PublishWizard({
     setOverwrite(false);
     setError(null);
     setSubmitting(null);
+    setSuccess(null);
   }
 
   /**
@@ -194,12 +205,53 @@ export function PublishWizard({
           ? `已发布 ${label} 为当前版本`
           : `已保存 ${label} 为草稿，可在「待发布草稿」中发布`,
       );
-      reset();
+      // 保留完成页而不是直接重置，避免用户误以为没有提交
+      setSuccess({ versionName, versionCode, publish });
+      setChangelog("");
+      setStaged(null);
+      setIconId("");
     } catch {
       setError("网络异常，请检查连接后重试");
     } finally {
       setSubmitting(null);
     }
+  }
+
+  // 提交成功后展示完成页：明确告知结果，并提供查看前台页面与继续发布的入口
+  if (success) {
+    return (
+      <section
+        role="status"
+        className="rounded-2xl border border-emerald-200 bg-emerald-50/80 p-5 dark:border-emerald-500/30 dark:bg-emerald-500/10"
+      >
+        <div className="flex items-start gap-3">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-base font-semibold text-white">
+            ✓
+          </span>
+          <div className="min-w-0">
+            <p className="text-base font-semibold text-emerald-900 dark:text-emerald-200">
+              {success.publish ? "发布成功" : "草稿已保存"}
+            </p>
+            <p className="mt-1 text-sm leading-6 text-emerald-800 dark:text-emerald-300">
+              {success.publish
+                ? `v${success.versionName}（${success.versionCode}）已设为当前版本，前台下载与更新检查已同步。`
+                : `v${success.versionName}（${success.versionCode}）已保存为草稿，可在「待发布草稿」中点击“立即发布”。`}
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          {appUrl ? (
+            <Link href={appUrl} target="_blank" rel="noreferrer" className={`${primaryButtonClass} px-4 py-2`}>
+              {success.publish ? "查看已发布的应用页面" : "查看应用页面"}
+            </Link>
+          ) : null}
+          <button type="button" onClick={reset} className={secondaryButtonClass}>
+            继续发布新版本
+          </button>
+        </div>
+      </section>
+    );
   }
 
   return (

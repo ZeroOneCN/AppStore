@@ -203,6 +203,7 @@ async function DeveloperAppContent({
             releases={releaseData}
             apiBase="/api/dev"
             appIconUrl={app.iconUrl}
+            appUrl={app.visibility === "PUBLIC" ? `/apps/${app.slug}` : null}
             showDownload
           />
         </section>

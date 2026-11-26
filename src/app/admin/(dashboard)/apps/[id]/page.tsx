@@ -217,6 +217,7 @@ async function AdminAppContent({
             appType={app.type}
             releases={releaseData}
             appIconUrl={app.iconUrl}
+            appUrl={app.visibility === "PUBLIC" ? `/apps/${app.slug}` : null}
           />
         </section>
       ) : null}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useState } from "react";
 import { checkApkFile } from "@/lib/apk-file";
 import { formatBytes } from "@/lib/format";
@@ -67,7 +67,6 @@ export function AppCreateWizard({
   developerOptions?: { id: string; username: string; displayName: string }[];
   showAdminFields?: boolean;
 }) {
-  const router = useRouter();
   const [step, setStep] = useState<WizardStep>(1);
   const [type, setType] = useState<"ANDROID" | "WEB">("ANDROID");
   const [file, setFile] = useState<File | null>(null);
@@ -90,6 +89,14 @@ export function AppCreateWizard({
   const [changelog, setChangelog] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** 创建成功后的结果，用于展示完成提示与跳转入口 */
+  const [success, setSuccess] = useState<{
+    id: string;
+    slug: string;
+    versionName?: string;
+    versionCode?: number;
+    published: boolean;
+  } | null>(null);
 
   const tagList = tags
     .split(/[,，]/)
@@ -244,21 +251,79 @@ export function AppCreateWizard({
 
       const created =
         data && typeof data === "object"
-          ? (data as { id?: unknown; release?: { versionName?: string; versionCode?: number } })
+          ? (data as {
+              id?: unknown;
+              slug?: unknown;
+              release?: { versionName?: string; versionCode?: number };
+            })
           : null;
       const id = created?.id ? String(created.id) : "";
-      const params = new URLSearchParams({ created: "1" });
-      const versionName = created?.release?.versionName;
-      const versionCode = created?.release?.versionCode;
-      if (versionName) {
-        params.set("version", versionCode ? `${versionName}（${versionCode}）` : versionName);
-      }
-      router.push(id ? `${afterCreateBase}/${id}?${params.toString()}` : afterCreateBase);
+      setSuccess({
+        id,
+        slug: created?.slug ? String(created.slug) : slug.trim() || generateSlug(name),
+        versionName: created?.release?.versionName,
+        versionCode: created?.release?.versionCode,
+        published: type === "ANDROID",
+      });
     } catch {
       setError("网络异常，请检查连接后重试");
     } finally {
       setSubmitting(false);
     }
+  }
+
+  // 创建成功后展示完成页：明确告知结果，并提供前台页面、管理页与返回列表入口
+  if (success) {
+    const versionLabel = success.versionName
+      ? `v${success.versionName}${success.versionCode ? `（${success.versionCode}）` : ""}`
+      : "";
+    const managementParams = new URLSearchParams({ created: "1" });
+    if (versionLabel) managementParams.set("version", versionLabel);
+    const managementHref = success.id
+      ? `${afterCreateBase}/${success.id}?${managementParams.toString()}`
+      : afterCreateBase;
+
+    return (
+      <section
+        role="status"
+        className="rounded-2xl border border-emerald-200 bg-emerald-50/80 p-5 dark:border-emerald-500/30 dark:bg-emerald-500/10"
+      >
+        <div className="flex items-start gap-3">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-base font-semibold text-white">
+            ✓
+          </span>
+          <div className="min-w-0">
+            <p className="text-base font-semibold text-emerald-900 dark:text-emerald-200">
+              {success.published ? "应用已创建并发布" : "应用已创建"}
+            </p>
+            <p className="mt-1 text-sm leading-6 text-emerald-800 dark:text-emerald-300">
+              {success.published
+                ? `${name} 的 ${versionLabel} 已发布为当前版本，前台可立即查看与下载。`
+                : `${name} 已创建，可进入管理页上传版本或调整内容。`}
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          {visibility === "PUBLIC" ? (
+            <Link
+              href={`/apps/${success.slug}`}
+              target="_blank"
+              rel="noreferrer"
+              className={`${primaryButtonClass} px-4 py-2`}
+            >
+              查看已发布的应用页面
+            </Link>
+          ) : null}
+          <Link href={managementHref} className={secondaryButtonClass}>
+            进入应用管理
+          </Link>
+          <Link href={afterCreateBase} className={secondaryButtonClass}>
+            返回应用列表
+          </Link>
+        </div>
+      </section>
+    );
   }
 
   return (
