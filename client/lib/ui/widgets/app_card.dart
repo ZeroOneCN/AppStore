@@ -19,7 +19,7 @@ class AppWallCard extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final version = app.currentVersion;
-    final radius = BorderRadius.circular(18);
+    final radius = BorderRadius.circular(16);
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -31,10 +31,10 @@ class AppWallCard extends StatelessWidget {
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(
-              alpha: theme.brightness == Brightness.light ? 0.04 : 0.2,
+              alpha: theme.brightness == Brightness.light ? 0.03 : 0.18,
             ),
-            blurRadius: 14,
-            offset: const Offset(0, 6),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -45,14 +45,14 @@ class AppWallCard extends StatelessWidget {
           borderRadius: radius,
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    AppIcon(name: app.name, iconUrl: app.iconUrl, size: 46),
+                    AppIcon(name: app.name, iconUrl: app.iconUrl, size: 44),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Column(
@@ -75,7 +75,7 @@ class AppWallCard extends StatelessWidget {
                                 const SizedBox(width: 4),
                                 Icon(
                                   Icons.push_pin_rounded,
-                                  size: 14,
+                                  size: 13,
                                   color: scheme.tertiary,
                                 ),
                               ],
@@ -88,7 +88,8 @@ class AppWallCard extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: scheme.onSurfaceVariant,
-                              height: 1.35,
+                              height: 1.3,
+                              fontSize: 11.5,
                             ),
                           ),
                         ],
@@ -96,7 +97,7 @@ class AppWallCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                const Spacer(),
+                const SizedBox(height: 8),
                 Row(
                   children: [
                     _TypeBadge(isAndroid: app.isAndroid),

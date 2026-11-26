@@ -248,15 +248,15 @@ class _HomePageState extends State<HomePage> {
           final textScale = MediaQuery.textScalerOf(context)
               .scale(1)
               .clamp(1.0, 1.6);
-          final extent = 182.0 * textScale;
+          final extent = 118.0 * textScale;
 
           return GridView.builder(
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: columns,
-              mainAxisSpacing: 12,
-              crossAxisSpacing: 12,
+              mainAxisSpacing: 10,
+              crossAxisSpacing: 10,
               mainAxisExtent: extent,
             ),
             itemCount: _apps.length,
