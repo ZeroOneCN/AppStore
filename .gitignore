@@ -38,6 +38,9 @@ yarn-error.log*
 /data/
 /storage/
 
+# 内部协作草稿
+/.trae/
+
 # vercel
 .vercel
 

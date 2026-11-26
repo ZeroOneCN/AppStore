@@ -10,6 +10,12 @@
   --surface: #ffffff;
   --surface-muted: #f0f0f2;
   --hairline: rgba(0, 0, 0, 0.08);
+
+  /* 统一圆角、阴影与品牌渐变，供组件类复用 */
+  --radius-card: 22px;
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.04), 0 18px 44px -34px rgba(0, 0, 0, 0.45);
+  --shadow-float: 0 30px 70px -36px rgba(10, 22, 60, 0.45);
+  --gradient-brand: linear-gradient(135deg, #1e51ee 0%, #5b83ff 100%);
 }
 
 .dark {
@@ -54,6 +60,9 @@
 
 html {
   -webkit-text-size-adjust: 100%;
+  /* 始终预留滚动条空间，切换后台标签页时页面不抖动 */
+  scrollbar-gutter: stable;
+  overflow-y: scroll;
 }
 
 body {
@@ -84,6 +93,21 @@ body {
   background: rgba(30, 81, 238, 0.22);
 }
 
+/* 键盘焦点可见环，保证可访问性 */
+:focus-visible {
+  outline: 2px solid rgba(30, 81, 238, 0.55);
+  outline-offset: 2px;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.18) transparent;
+}
+
+.dark * {
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
 @layer components {
   /* 毛玻璃导航栏 */
   .glass-bar {
@@ -97,12 +121,21 @@ body {
 
   /* 主按钮 */
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-brand px-5 py-2.5 text-sm font-medium text-white shadow-[0_8px_20px_-12px_rgba(30,81,238,0.9)] transition duration-200 hover:bg-brand-deep active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60;
+    @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-brand px-5 py-2.5 text-sm font-medium text-white shadow-[0_8px_20px_-12px_rgba(30,81,238,0.9)] transition duration-200 hover:bg-brand-deep active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60;
   }
 
-  /* 次要按钮 */
+  /* 次要按钮：与主按钮同高、同圆角，保证并排时等分 */
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-black/10 bg-white/70 px-3.5 py-2 text-sm text-neutral-700 transition duration-200 hover:bg-white active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/12 dark:bg-white/5 dark:text-neutral-200 dark:hover:bg-white/10;
+    @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-black/10 bg-white/70 px-5 py-2.5 text-sm text-neutral-700 transition duration-200 hover:bg-white active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/12 dark:bg-white/5 dark:text-neutral-200 dark:hover:bg-white/10;
+  }
+
+  /* 并排按钮容器：窄屏纵向、宽屏等分 */
+  .btn-group {
+    @apply grid gap-2 sm:auto-cols-fr sm:grid-flow-col;
+  }
+
+  .btn-group > * {
+    @apply w-full;
   }
 
   /* 输入框 */
@@ -117,6 +150,58 @@ body {
 
   /* 内容较少的页面（登录、空态）垂直居中 */
   .page-center {
-    @apply flex min-h-[calc(100svh-9rem)] flex-col justify-center;
+    @apply flex min-h-[calc(100svh-9rem)] flex-col items-center justify-center;
+  }
+
+  /* 通用面板：前台与后台统一底色、描边与阴影 */
+  .surface {
+    @apply rounded-[22px] border border-black/[0.06] bg-white/80 backdrop-blur-sm dark:border-white/10 dark:bg-white/[0.04];
+    box-shadow: var(--shadow-card);
+  }
+
+  /* 页面标题区：标题 + 说明 + 右侧操作 */
+  .page-header {
+    @apply flex flex-wrap items-end justify-between gap-4;
+  }
+
+  .page-title {
+    @apply text-[28px] leading-tight font-semibold tracking-[-0.02em] sm:text-[32px];
+  }
+
+  .page-desc {
+    @apply mt-1.5 max-w-2xl text-sm leading-6 text-neutral-500 dark:text-neutral-400;
+  }
+
+  /* 小标签 */
+  .chip {
+    @apply inline-flex items-center gap-1 rounded-full border border-black/[0.06] bg-black/[0.03] px-2.5 py-1 text-[11px] leading-none text-neutral-600 dark:border-white/10 dark:bg-white/[0.06] dark:text-neutral-300;
+  }
+
+  /* 深色代码块，文档与示例共用 */
+  .code-block {
+    @apply overflow-x-auto rounded-2xl bg-[#0b0d12] px-4 py-3.5 font-mono text-[12.5px] leading-6 text-neutral-100 dark:bg-black/60;
+  }
+
+  /* 空态容器：居中、虚线描边 */
+  .empty-state {
+    @apply flex min-h-[280px] flex-col items-center justify-center rounded-[22px] border border-dashed border-black/10 bg-white/50 px-6 text-center dark:border-white/12 dark:bg-white/[0.03];
+  }
+
+  /* 品牌渐变文字 */
+  .gradient-text {
+    background: var(--gradient-brand);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* 首页光晕装饰，需配合 relative 容器 */
+  .hero-glow {
+    @apply pointer-events-none absolute rounded-full bg-brand/20 blur-[110px];
+  }
+
+  /* 小节标题 */
+  .section-title {
+    @apply text-[20px] font-semibold tracking-[-0.01em] sm:text-[22px];
   }
 }

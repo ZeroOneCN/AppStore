@@ -139,24 +139,24 @@ async function AdminAppContent({ params }: { params: RouteParams }) {
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
         <div className="space-y-6">
-          <section className="rounded-2xl border border-neutral-200 bg-white p-5 dark:border-neutral-800 dark:bg-neutral-900">
+          <section className="surface p-5">
             <h2 className="mb-3 text-sm font-semibold">版本管理</h2>
             <ReleaseManager appId={app.id} appType={app.type} releases={releaseData} />
           </section>
 
-          <section className="rounded-2xl border border-neutral-200 bg-white p-5 dark:border-neutral-800 dark:bg-neutral-900">
+          <section className="surface p-5">
             <h2 className="mb-3 text-sm font-semibold">截图管理</h2>
             <ScreenshotManager appId={app.id} screenshots={app.screenshots} />
           </section>
         </div>
 
         <aside className="space-y-6">
-          <section className="rounded-2xl border border-neutral-200 bg-white p-5 dark:border-neutral-800 dark:bg-neutral-900">
+          <section className="surface p-5">
             <h2 className="mb-3 text-sm font-semibold">应用图标</h2>
             <IconUploader appId={app.id} iconUrl={app.iconUrl} />
           </section>
 
-          <section className="rounded-2xl border border-neutral-200 bg-white p-5 text-xs text-neutral-500 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-400">
+          <section className="surface p-5 text-xs text-neutral-500 dark:text-neutral-400">
             <h2 className="mb-3 text-sm font-semibold text-neutral-900 dark:text-neutral-50">记录信息</h2>
             <dl className="space-y-2">
               <div className="flex justify-between gap-3">

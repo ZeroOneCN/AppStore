@@ -10,8 +10,8 @@ const PASSWORD_COST = 12;
 /** 登录失败计数：key 为客户端标识（IP），value 为次数与窗口过期时间 */
 const loginFailures = new Map<string, { count: number; resetAt: number }>();
 
-/** 会话载荷 */
-export type SessionPayload = { username: string };
+/** 管理员会话载荷：角色字段用于统一登录后的权限分级 */
+export type SessionPayload = { sub: "admin"; username: string; role: "admin" };
 
 /**
  * 获取会话签名密钥。
@@ -48,7 +48,7 @@ export async function verifyPassword(plain: string, hash: string): Promise<boole
  */
 export async function createSessionToken(username: string, now = Date.now()): Promise<string> {
   const issuedAt = Math.floor(now / 1000);
-  return new SignJWT({ username })
+  return new SignJWT({ sub: "admin", username, role: "admin" })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt(issuedAt)
     .setExpirationTime(issuedAt + SESSION_TTL_SECONDS)
@@ -64,10 +64,14 @@ export async function createSessionToken(username: string, now = Date.now()): Pr
 export async function verifySessionToken(token: string): Promise<SessionPayload> {
   try {
     const { payload } = await jwtVerify(token, sessionKey(), { algorithms: ["HS256"] });
-    if (typeof payload.username !== "string" || !payload.username) {
-      throw new Error("missing username");
+    if (
+      payload.role !== "admin" ||
+      typeof payload.username !== "string" ||
+      !payload.username
+    ) {
+      throw new Error("invalid admin token");
     }
-    return { username: payload.username };
+    return { sub: "admin", username: payload.username, role: "admin" };
   } catch {
     throw new AppError("UNAUTHORIZED", "登录状态无效或已过期，请重新登录");
   }
@@ -75,9 +79,10 @@ export async function verifySessionToken(token: string): Promise<SessionPayload>
 
 /**
  * 计算会话 Cookie 的选项。
+ * @param secure 是否启用 Secure；登录接口会按请求实际协议传入
  * @returns Next.js 兼容的 Cookie 选项
  */
-export function sessionCookieOptions(): {
+export function sessionCookieOptions(secure?: boolean): {
   httpOnly: true;
   sameSite: "lax";
   path: "/";
@@ -89,8 +94,8 @@ export function sessionCookieOptions(): {
     sameSite: "lax",
     path: "/",
     maxAge: SESSION_TTL_SECONDS,
-    // 内网明文 HTTP 试用期不启用 secure，切换 HTTPS 后自动生效
-    secure: getEnv().BASE_URL.startsWith("https://"),
+    // 优先按当前请求协议判断，回退到 BASE_URL
+    secure: secure ?? getEnv().BASE_URL.startsWith("https://"),
   };
 }
 

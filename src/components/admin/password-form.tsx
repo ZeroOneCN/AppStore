@@ -13,9 +13,9 @@ import { errorMessageOf, inputClass, labelClass, primaryButtonClass } from "./ui
  * @returns 密码表单界面
  */
 export function PasswordForm({
-  endpoint = "/api/admin/password",
-  logoutEndpoint = "/api/admin/logout",
-  loginPath = "/admin/login",
+  endpoint = "/api/auth/password",
+  logoutEndpoint = "/api/auth/logout",
+  loginPath = "/login",
   note = "修改成功后当前会话会退出，需使用新密码重新登录；已签发的旧令牌在过期前仍然有效。",
 }: {
   endpoint?: string;
@@ -75,7 +75,7 @@ export function PasswordForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="card-apple max-w-xl space-y-4 p-5">
+    <form onSubmit={handleSubmit} className="surface w-full space-y-4 p-6">
       <div>
         <label htmlFor="currentPassword" className={labelClass}>
           当前密码

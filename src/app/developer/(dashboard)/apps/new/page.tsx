@@ -2,6 +2,7 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { AppForm } from "@/components/admin/app-form";
+import { PageHeader } from "@/components/page-header";
 
 /**
  * 新建应用表单数据区。
@@ -18,10 +19,10 @@ async function NewDeveloperAppContent() {
       >
         ← 返回我的应用
       </Link>
-      <h1 className="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">新建应用</h1>
-      <p className="mt-1 mb-6 text-sm text-neutral-500 dark:text-neutral-400">
-        创建后可上传 APK，解析成功会直接发布；可见性与置顶由管理员控制
-      </p>
+      <PageHeader
+        title="新建应用"
+        description="创建后可上传 APK，解析成功会直接发布；可见性与置顶由管理员控制"
+      />
 
       <AppForm
         mode="create"

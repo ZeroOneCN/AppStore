@@ -11,7 +11,7 @@ const SUB_DIRS = ["apks", "icons", "screenshots", "tmp"] as const;
  * @returns 绝对路径
  */
 export function storageRoot(): string {
-  return path.resolve(process.cwd(), getEnv().STORAGE_DIR);
+  return path.resolve(/*turbopackIgnore: true*/ process.cwd(), getEnv().STORAGE_DIR);
 }
 
 /**
@@ -20,7 +20,7 @@ export function storageRoot(): string {
  */
 export function ensureStorageDirs(): void {
   for (const dir of SUB_DIRS) {
-    fs.mkdirSync(path.join(storageRoot(), dir), { recursive: true });
+    fs.mkdirSync(path.join(/*turbopackIgnore: true*/ storageRoot(), dir), { recursive: true });
   }
 }
 
@@ -43,7 +43,7 @@ function assertSafeSegment(segment: string): string {
  * @returns 绝对路径
  */
 export function storagePath(...segments: string[]): string {
-  return path.join(storageRoot(), ...segments.map(assertSafeSegment));
+  return path.join(/*turbopackIgnore: true*/ storageRoot(), ...segments.map(assertSafeSegment));
 }
 
 /**
@@ -65,7 +65,7 @@ export function toStoredPath(absolutePath: string): string {
  * @returns 绝对路径
  */
 export function resolveStoredPath(storedPath: string): string {
-  const absolute = path.resolve(storageRoot(), storedPath);
+  const absolute = path.resolve(/*turbopackIgnore: true*/ storageRoot(), storedPath);
   const relative = path.relative(storageRoot(), absolute);
   if (!relative || relative.startsWith("..") || path.isAbsolute(relative)) {
     throw new AppError("VALIDATION_FAILED", "非法的存储路径");

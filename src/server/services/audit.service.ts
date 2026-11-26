@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import { prisma } from "../db";
 import { logger } from "../infra/logger";
 
@@ -8,13 +9,24 @@ export interface AuditEntry {
   action: string;
   target: string;
   detail: string;
+  ip: string;
   createdAt: string;
+}
+
+/** 审计日志分页结果 */
+export interface AuditLogPage {
+  items: AuditEntry[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
 }
 
 /** 操作类型 → 中文名称 */
 export const AUDIT_ACTION_LABEL: Record<string, string> = {
   "admin.login": "登录后台",
   "admin.password": "修改密码",
+  "logs.clear": "清空日志",
   "app.create": "创建应用",
   "app.update": "更新应用",
   "app.delete": "删除应用",
@@ -37,6 +49,31 @@ export const AUDIT_ACTION_LABEL: Record<string, string> = {
 };
 
 /**
+ * 从当前请求头读取来源 IP，反向代理场景保留完整转发链。
+ * 无请求上下文时返回空字符串。
+ * @returns 客户端 IP 文本
+ */
+async function requestIp(): Promise<string> {
+  try {
+    const store = await headers();
+    const forwarded = store.get("x-forwarded-for");
+    if (forwarded) {
+      const chain = forwarded
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean)
+        .join(", ");
+      if (chain) return chain.slice(0, 200);
+    }
+    const realIp = store.get("x-real-ip");
+    if (realIp) return realIp.slice(0, 200);
+    return "";
+  } catch {
+    return "";
+  }
+}
+
+/**
  * 写入一条审计日志；失败只记录日志，不影响主流程。
  * @param actor 操作者用户名
  * @param action 操作类型
@@ -51,7 +88,9 @@ export async function logAudit(
   detail = "",
 ): Promise<void> {
   try {
-    await prisma.auditLog.create({ data: { actor, action, target, detail } });
+    await prisma.auditLog.create({
+      data: { actor, action, target, detail, ip: await requestIp() },
+    });
   } catch (error) {
     logger.error("写入审计日志失败", {
       action,
@@ -61,21 +100,46 @@ export async function logAudit(
 }
 
 /**
- * 查询最近的审计日志。
- * @param limit 返回条数，默认 100
- * @returns 审计日志数组（时间倒序）
+ * 分页查询审计日志。
+ * @param page 页码，从 1 开始
+ * @param pageSize 每页条数
+ * @returns 分页结果（时间倒序）
  */
-export async function listAuditLogs(limit = 100): Promise<AuditEntry[]> {
+export async function listAuditLogs(page = 1, pageSize = 20): Promise<AuditLogPage> {
+  const safePage = Math.max(1, Math.floor(page));
+  const safeSize = Math.min(100, Math.max(1, Math.floor(pageSize)));
+  const total = await prisma.auditLog.count();
+  const totalPages = Math.max(1, Math.ceil(total / safeSize));
+  const current = Math.min(safePage, totalPages);
+
   const rows = await prisma.auditLog.findMany({
     orderBy: { createdAt: "desc" },
-    take: limit,
+    skip: (current - 1) * safeSize,
+    take: safeSize,
   });
-  return rows.map((row) => ({
-    id: row.id,
-    actor: row.actor,
-    action: row.action,
-    target: row.target,
-    detail: row.detail,
-    createdAt: row.createdAt.toISOString(),
-  }));
+
+  return {
+    items: rows.map((row) => ({
+      id: row.id,
+      actor: row.actor,
+      action: row.action,
+      target: row.target,
+      detail: row.detail,
+      ip: row.ip,
+      createdAt: row.createdAt.toISOString(),
+    })),
+    total,
+    page: current,
+    pageSize: safeSize,
+    totalPages,
+  };
+}
+
+/**
+ * 清空全部审计日志。
+ * @returns 删除条数
+ */
+export async function clearAuditLogs(): Promise<number> {
+  const result = await prisma.auditLog.deleteMany();
+  return result.count;
 }

@@ -268,11 +268,13 @@ export async function listDownloadableReleases(appId: string, limit = 20): Promi
  * 更新基准取 versionCode 最大的已发布版本，与当前展示版本解耦，回滚不会导致客户端降级。
  * @param packageName 应用包名
  * @param currentVersionCode 客户端已安装的版本号
+ * @param origin 当前部署的站点根地址
  * @returns 更新检查结果
  */
 export async function evaluateUpdate(
   packageName: string,
   currentVersionCode: number,
+  origin?: string,
 ): Promise<UpdateCheckResult> {
   const app = await prisma.app.findFirst({
     where: { packageName, type: "ANDROID", visibility: "PUBLIC" },
@@ -305,7 +307,7 @@ export async function evaluateUpdate(
       sha256: latest.sha256,
       minSdk: latest.minSdk,
       minSupportedVersionCode: latest.minSupportedVersionCode,
-      downloadUrl: signDownloadPath(latest.id).url,
+      downloadUrl: signDownloadPath(latest.id, undefined, undefined, origin).url,
       publishedAt: latest.publishedAt?.toISOString() ?? null,
     },
   };

@@ -98,26 +98,6 @@ export async function verifyDeveloperSessionToken(token: string): Promise<Develo
 }
 
 /**
- * 计算开发者会话 Cookie 的选项。
- * @returns Next.js 兼容的 Cookie 选项
- */
-export function developerCookieOptions(): {
-  httpOnly: true;
-  sameSite: "lax";
-  path: "/";
-  maxAge: number;
-  secure: boolean;
-} {
-  return {
-    httpOnly: true,
-    sameSite: "lax",
-    path: "/",
-    maxAge: SESSION_TTL_SECONDS,
-    secure: getEnv().BASE_URL.startsWith("https://"),
-  };
-}
-
-/**
  * 开发者登录：校验限流、账号状态与密码。
  * @param username 用户名
  * @param password 明文密码

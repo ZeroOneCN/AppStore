@@ -1,15 +1,18 @@
 import type { MetadataRoute } from "next";
+import { getRequestOrigin } from "@/server/http/base-url";
 import { listPublicApps } from "@/server/services/app.service";
 
 /**
- * 站点地图：首页与全部公开应用详情页。
+ * 站点地图：宣传首页、应用广场、接入文档与全部公开应用详情页。
  * @returns 站点地图条目
  */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const base = (process.env.BASE_URL ?? "http://localhost:3000").replace(/\/$/, "");
+  const base = await getRequestOrigin();
 
   const entries: MetadataRoute.Sitemap = [
     { url: `${base}/`, changeFrequency: "daily", priority: 1 },
+    { url: `${base}/apps`, changeFrequency: "daily", priority: 0.9 },
+    { url: `${base}/docs`, changeFrequency: "weekly", priority: 0.7 },
   ];
 
   try {

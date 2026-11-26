@@ -3,6 +3,7 @@ import { prisma } from "../db";
 import { MAX_RELEASES_IN_DETAIL, type AppType, type Visibility } from "../infra/constants";
 import { AppError } from "../infra/errors";
 import { logger } from "../infra/logger";
+import { getRequestOrigin } from "../http/base-url";
 import { removeAppFiles } from "./storage.service";
 import { signDownloadPath } from "./signing.service";
 
@@ -305,7 +306,7 @@ export async function getAppBySlug(slug: string, includePrivate = false): Promis
           forceUpdate: currentRelease.forceUpdate,
           minSupportedVersionCode: currentRelease.minSupportedVersionCode,
           publishedAt: currentRelease.publishedAt?.toISOString() ?? null,
-          downloadUrl: signDownloadPath(currentRelease.id).url,
+          downloadUrl: signDownloadPath(currentRelease.id, undefined, undefined, await getRequestOrigin()).url,
         }
       : null,
     releases: app.releases.map((release) => ({

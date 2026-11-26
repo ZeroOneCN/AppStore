@@ -3,7 +3,7 @@ import { SESSION_COOKIE } from "@/server/infra/constants";
 import { sessionCookieOptions } from "@/server/services/auth.service";
 
 /**
- * 管理员登出：清除会话 Cookie。
+ * 统一登出：清除管理员与开发者共用的会话 Cookie。
  * @returns 成功标记
  */
 export async function POST(): Promise<Response> {

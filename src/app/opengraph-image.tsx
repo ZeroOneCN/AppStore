@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 
 /** 分享图替代文本 */
-export const alt = "我的应用仓库 · 个人应用分发中心";
+export const alt = "应用仓库 · 应用分发中心";
 
 /** 分享图尺寸 */
 export const size = { width: 1200, height: 630 };

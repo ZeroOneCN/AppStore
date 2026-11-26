@@ -48,5 +48,5 @@ F1–F12 全部有对应实现与证据，其中 F11（商店自更新）最终�
 
 - 部署与升级：[DEPLOY_AppStore.md](file:///c:/Code/AppStore/docs/AppStore/DEPLOY_AppStore.md)
 - 接入示例：[INTEGRATION_AppStore.md](file:///c:/Code/AppStore/docs/AppStore/INTEGRATION_AppStore.md)
-- 后台入口：`/admin/login`
+- 统一登录入口：`/login`（管理员与开发者共用，登录后按角色进入控制台）
 - 初始化/重置管理员：`npm run init-admin`

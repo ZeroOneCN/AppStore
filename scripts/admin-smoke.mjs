@@ -112,7 +112,7 @@ await expect(
 
 // 登录限流：使用独立来源地址，避免影响后续登录
 for (let i = 1; i <= 5; i += 1) {
-  const response = await request("/api/admin/login", {
+  const response = await request("/api/auth/login", {
     method: "POST",
     auth: false,
     headers: { "content-type": "application/json", "x-forwarded-for": "10.9.9.9" },
@@ -120,7 +120,7 @@ for (let i = 1; i <= 5; i += 1) {
   });
   assert(response.status === 401, `第 ${i} 次错误密码返回 401`);
 }
-const limited = await request("/api/admin/login", {
+const limited = await request("/api/auth/login", {
   method: "POST",
   auth: false,
   headers: { "content-type": "application/json", "x-forwarded-for": "10.9.9.9" },
@@ -129,7 +129,7 @@ const limited = await request("/api/admin/login", {
 assert(limited.status === 429, "同一来源第 6 次登录失败返回 429");
 
 // 正确登录
-const loginResponse = await request("/api/admin/login", {
+const loginResponse = await request("/api/auth/login", {
   method: "POST",
   auth: false,
   headers: { "content-type": "application/json" },
@@ -303,7 +303,7 @@ const apkDirRemoved = await fs.access(`${process.cwd()}\\storage\\apks\\${create
 assert(apkDirRemoved, "删除应用后 APK 目录已清理");
 
 // 登出
-const logoutResponse = await request("/api/admin/logout", { method: "POST" });
+const logoutResponse = await request("/api/auth/logout", { method: "POST" });
 await expect(logoutResponse.clone(), 200, "登出成功");
 const cleared = (logoutResponse.headers.getSetCookie?.() ?? []).find((item) =>
   item.startsWith("appstore_session="),

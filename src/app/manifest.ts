@@ -6,9 +6,9 @@ import type { MetadataRoute } from "next";
  */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "我的应用仓库",
+    name: "应用仓库",
     short_name: "应用仓库",
-    description: "个人应用与网页作品的分发展示中心",
+    description: "应用与网页作品的集中分发中心",
     start_url: "/",
     display: "standalone",
     background_color: "#f5f5f7",

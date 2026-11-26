@@ -1,0 +1,15 @@
+node_modules
+.next
+.git
+.gitignore
+data
+storage
+.env
+.env.*
+!.env.example
+npm-debug.log
+Dockerfile
+.dockerignore
+docs
+.trae
+tsconfig.tsbuildinfo

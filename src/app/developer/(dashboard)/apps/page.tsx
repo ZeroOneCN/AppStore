@@ -2,6 +2,9 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { AppIcon } from "@/components/app-card";
+import { EmptyState } from "@/components/empty-state";
+import { PageHeader } from "@/components/page-header";
+import { StatCard } from "@/components/stat-card";
 import { formatDateTime } from "@/lib/format";
 import { requireDeveloperPage } from "@/server/http/guards";
 import type { AppCardDto } from "@/server/services/app.service";
@@ -67,43 +70,32 @@ async function DeveloperAppsContent() {
 
   return (
     <div className="w-full">
-      <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">我的应用</h1>
-          <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
-            管理自己的应用与版本，上传 APK 后自动发布为当前版本
-          </p>
-        </div>
-        <Link href="/developer/apps/new" className="btn-primary">
-          新建应用
-        </Link>
-      </div>
+      <PageHeader
+        title="我的应用"
+        description="管理自己的应用与版本，上传 APK 后自动发布为当前版本"
+        actions={
+          <Link href="/developer/apps/new" className="btn-primary">
+            新建应用
+          </Link>
+        }
+      />
 
       <div className="mb-6 grid grid-cols-3 gap-3">
-        {[
-          { label: "应用总数", value: apps.length },
-          { label: "已发布", value: published },
-          { label: "累计下载", value: downloads },
-        ].map((item) => (
-          <div key={item.label} className="card-apple px-4 py-3">
-            <p className="text-xs text-neutral-500 dark:text-neutral-400">{item.label}</p>
-            <p className="mt-1 text-xl font-semibold tabular-nums">{item.value}</p>
-          </div>
-        ))}
+        <StatCard label="应用总数" value={apps.length} />
+        <StatCard label="已发布" value={published} />
+        <StatCard label="累计下载" value={downloads} />
       </div>
 
       {apps.length === 0 ? (
-        <div className="card-apple grid min-h-[260px] place-items-center px-6 text-center">
-          <div>
-            <p className="text-sm font-medium">还没有应用</p>
-            <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-              创建应用并上传第一个 APK，即可开始分发
-            </p>
-            <Link href="/developer/apps/new" className="btn-primary mt-4">
+        <EmptyState
+          title="还没有应用"
+          description="创建应用并上传第一个 APK，即可开始分发"
+          action={
+            <Link href="/developer/apps/new" className="btn-primary">
               新建应用
             </Link>
-          </div>
-        </div>
+          }
+        />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {apps.map((app) => (

@@ -22,7 +22,7 @@ const envSchema = z.object({
   ADMIN_USERNAME: z.string().min(1).default("admin"),
   ADMIN_PASSWORD: z.string().optional(),
   MAX_APK_MB: z.coerce.number().int().positive().default(200),
-  NEXT_PUBLIC_SITE_NAME: z.string().min(1).default("我的应用仓库"),
+  NEXT_PUBLIC_SITE_NAME: z.string().min(1).default("应用仓库"),
 });
 
 export type Env = z.infer<typeof envSchema>;

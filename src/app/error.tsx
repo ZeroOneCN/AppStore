@@ -21,11 +21,11 @@ export default function GlobalError({
   }, [error]);
 
   return (
-    <div className="grid min-h-screen place-items-center px-6 text-center">
+    <div className="page-center page-shell py-16 text-center">
       <div className="flex flex-col items-center">
         <BrandLogo size={56} className="opacity-90" />
-        <h1 className="mt-6 text-xl font-semibold tracking-tight">页面加载失败</h1>
-        <p className="mt-2 max-w-md text-sm text-neutral-500 dark:text-neutral-400">
+        <h1 className="mt-6 text-xl font-semibold tracking-tight sm:text-2xl">页面加载失败</h1>
+        <p className="mt-2 max-w-md text-sm leading-6 text-neutral-500 dark:text-neutral-400">
           {error.message || "发生了未预期的错误，请稍后重试。"}
         </p>
         <button type="button" onClick={reset} className="btn-primary mt-6">

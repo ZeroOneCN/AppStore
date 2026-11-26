@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
+import { PageHeader } from "@/components/page-header";
 import { getAdminStats } from "@/server/services/app.service";
 import { requireAdminPage } from "@/server/http/guards";
 
@@ -32,12 +33,7 @@ async function StatsContent() {
 
   return (
     <div className="w-full">
-      <div className="mb-5">
-        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">数据统计</h1>
-        <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
-          应用、版本与下载量的整体概览
-        </p>
-      </div>
+      <PageHeader title="数据统计" description="应用、版本与下载量的整体概览" />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
         <MetricCard label="应用总数" value={stats.appTotal} hint={`Android ${stats.androidCount} · 网页 ${stats.webCount}`} />

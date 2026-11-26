@@ -2,6 +2,9 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { AppIcon } from "@/components/app-card";
+import { EmptyState } from "@/components/empty-state";
+import { PageHeader } from "@/components/page-header";
+import { StatCard } from "@/components/stat-card";
 import { formatDateTime } from "@/lib/format";
 import { listAdminApps } from "@/server/services/app.service";
 import { requireAdminPage } from "@/server/http/guards";
@@ -17,23 +20,6 @@ type AdminAppsSearchParams = Promise<{
   sort?: string;
   page?: string;
 }>;
-
-/**
- * 概览统计卡片。
- * @param props.label 指标名称
- * @param props.value 指标数值
- * @param props.hint 补充说明
- * @returns 统计卡片
- */
-function StatCard({ label, value, hint }: { label: string; value: number; hint: string }) {
-  return (
-    <div className="card-apple px-4 py-3.5">
-      <dt className="text-[11px] text-neutral-500 dark:text-neutral-400">{label}</dt>
-      <dd className="mt-1 text-2xl font-semibold tracking-tight tabular-nums">{value}</dd>
-      <p className="mt-0.5 text-[11px] text-neutral-400">{hint}</p>
-    </div>
-  );
-}
 
 /**
  * 生成带查询参数的列表地址。
@@ -108,17 +94,15 @@ async function AppsContent({ searchParams }: { searchParams: AdminAppsSearchPara
 
   return (
     <>
-      <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">应用管理</h1>
-          <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
-            统一管理应用信息、版本发布与安装包
-          </p>
-        </div>
-        <Link href="/admin/apps/new" className="btn-primary">
-          新建应用
-        </Link>
-      </div>
+      <PageHeader
+        title="应用管理"
+        description="统一管理应用信息、版本发布与安装包"
+        actions={
+          <Link href="/admin/apps/new" className="btn-primary">
+            新建应用
+          </Link>
+        }
+      />
 
       <dl className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard label="应用总数" value={apps.length} hint="包含草稿与私有应用" />
@@ -175,25 +159,25 @@ async function AppsContent({ searchParams }: { searchParams: AdminAppsSearchPara
       </p>
 
       {apps.length === 0 ? (
-        <div className="card-apple grid min-h-[420px] place-items-center px-6 text-center">
-          <p className="text-base font-medium">还没有应用</p>
-          <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
-            先创建应用，再上传 APK 或填写网页链接
-          </p>
-          <Link href="/admin/apps/new" className="btn-primary mt-5">
-            新建应用
-          </Link>
-        </div>
+        <EmptyState
+          title="还没有应用"
+          description="先创建应用，再上传 APK 或填写网页链接"
+          action={
+            <Link href="/admin/apps/new" className="btn-primary">
+              新建应用
+            </Link>
+          }
+        />
       ) : pageItems.length === 0 ? (
-        <div className="card-apple grid min-h-[260px] place-items-center px-6 text-center">
-          <p className="text-base font-medium">没有匹配的应用</p>
-          <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
-            换个关键词，或清除筛选条件后重试
-          </p>
-          <Link href="/admin/apps" className="btn-secondary mt-5">
-            清除筛选
-          </Link>
-        </div>
+        <EmptyState
+          title="没有匹配的应用"
+          description="换个关键词，或清除筛选条件后重试"
+          action={
+            <Link href="/admin/apps" className="btn-secondary">
+              清除筛选
+            </Link>
+          }
+        />
       ) : (
         <>
           <div className="grid auto-rows-fr gap-4 [grid-template-columns:repeat(auto-fill,minmax(300px,1fr))]">

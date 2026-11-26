@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import { DEVELOPER_SESSION_COOKIE, SESSION_COOKIE } from "@/server/infra/constants";
+import { SESSION_COOKIE } from "@/server/infra/constants";
 import { AppError } from "@/server/infra/errors";
 import { verifySessionToken, type SessionPayload } from "@/server/services/auth.service";
 import {
@@ -10,9 +10,39 @@ import { assertDeveloperApp } from "@/server/services/developer.service";
 import type { App } from "@prisma/client";
 import { prisma } from "@/server/db";
 
+/** 统一会话信息：管理员与开发者共用 Cookie，仅以角色区分权限 */
+export type SessionInfo =
+  | { role: "admin"; sub: "admin"; username: string }
+  | { role: "developer"; sub: string; username: string };
+
 /**
- * 校验管理后台会话，未登录或令牌失效时抛出 401。
- * @returns 会话载荷
+ * 读取当前会话（管理员优先，其次开发者），仅验签不查询账号状态。
+ * 用于前台导航判断登录态等只读场景。
+ * @returns 会话信息，未登录或令牌无效时返回 null
+ */
+export async function getSession(): Promise<SessionInfo | null> {
+  const store = await cookies();
+  const token = store.get(SESSION_COOKIE)?.value;
+  if (!token) return null;
+
+  try {
+    const payload = await verifySessionToken(token);
+    return { role: "admin", sub: "admin", username: payload.username };
+  } catch {
+    // 非管理员令牌，继续尝试开发者令牌
+  }
+
+  try {
+    const payload = await verifyDeveloperSessionToken(token);
+    return { role: "developer", sub: payload.sub, username: payload.username };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 校验管理后台会话，未登录、令牌失效或角色不符时抛出 401。
+ * @returns 管理员会话载荷
  * @throws AppError 无 Cookie 或令牌无效时抛出 UNAUTHORIZED
  */
 export async function requireAdmin(): Promise<SessionPayload> {
@@ -23,14 +53,14 @@ export async function requireAdmin(): Promise<SessionPayload> {
 }
 
 /**
- * 校验开发者门户会话：验签后回查账号，停用或删除后立即失效。
+ * 校验开发者会话：统一 Cookie 验签后回查账号，停用或删除后立即失效。
  * @returns 开发者会话载荷
- * @throws AppError 无 Cookie、令牌无效、账号不存在或已停用时抛出 UNAUTHORIZED
+ * @throws AppError 无 Cookie、令牌无效、角色不符、账号不存在或已停用时抛出 UNAUTHORIZED
  */
 export async function requireDeveloper(): Promise<DeveloperSessionPayload> {
   const store = await cookies();
-  const token = store.get(DEVELOPER_SESSION_COOKIE)?.value;
-  if (!token) throw new AppError("UNAUTHORIZED", "请先登录开发者门户");
+  const token = store.get(SESSION_COOKIE)?.value;
+  if (!token) throw new AppError("UNAUTHORIZED", "请先登录开发者账号");
 
   const payload = await verifyDeveloperSessionToken(token);
   const developer = await prisma.developer.findUnique({

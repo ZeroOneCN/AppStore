@@ -1,16 +1,19 @@
+import { originFromRequest } from "@/server/http/base-url";
+
 /**
  * 输出 OpenAPI 3.1 描述，供客户端接入与接口调试。
+ * @param request HTTP 请求，用于推导当前部署地址
  * @returns OpenAPI JSON
  */
-export async function GET(): Promise<Response> {
-  const base = (process.env.BASE_URL ?? "http://localhost:3000").replace(/\/$/, "");
+export async function GET(request: Request): Promise<Response> {
+  const base = originFromRequest(request);
 
   const spec = {
     openapi: "3.1.0",
     info: {
       title: "AppStore API",
       version: "1.0.0",
-      description: "个人应用商店的公开浏览、下载与更新检查接口，以及管理后台接口。",
+      description: "应用仓库的公开浏览、下载与更新检查接口，以及管理后台接口。",
     },
     servers: [{ url: base, description: "当前部署" }],
     tags: [
@@ -180,10 +183,10 @@ export async function GET(): Promise<Response> {
           },
         },
       },
-      "/api/admin/login": {
+      "/api/auth/login": {
         post: {
           tags: ["admin"],
-          summary: "管理员登录",
+          summary: "统一登录（管理员 / 开发者）",
           requestBody: {
             required: true,
             content: {
@@ -197,19 +200,20 @@ export async function GET(): Promise<Response> {
             },
           },
           responses: {
-            "200": { description: "登录成功，下发 appstore_session Cookie" },
+            "200": { description: "登录成功，返回 role 与 redirectTo，并下发 appstore_session Cookie" },
             "401": { description: "账号或密码错误" },
+            "403": { description: "开发者账号已停用" },
             "429": { description: "失败次数过多，已限流" },
           },
         },
       },
-      "/api/admin/logout": {
-        post: { tags: ["admin"], summary: "退出登录", responses: { "200": { description: "已清除会话 Cookie" } } },
+      "/api/auth/logout": {
+        post: { tags: ["admin"], summary: "统一退出登录", responses: { "200": { description: "已清除会话 Cookie" } } },
       },
-      "/api/admin/password": {
+      "/api/auth/password": {
         post: {
           tags: ["admin"],
-          summary: "修改管理员密码",
+          summary: "修改当前账号密码（按角色区分）",
           security: [{ sessionCookie: [] }],
           requestBody: {
             required: true,

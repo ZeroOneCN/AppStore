@@ -2,6 +2,7 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { DevelopersManager } from "@/components/admin/developers-manager";
+import { PageHeader } from "@/components/page-header";
 import { listDevelopers } from "@/server/services/developer.service";
 import { requireAdminPage } from "@/server/http/guards";
 
@@ -16,22 +17,15 @@ async function DevelopersContent() {
 
   return (
     <div className="w-full">
-      <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">开发者</h1>
-          <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
-            创建开发者账号、启停权限与重置密码；开发者从 /developer 登录管理自己的应用
-          </p>
-        </div>
-        <Link
-          href="/developer/login"
-          target="_blank"
-          rel="noreferrer"
-          className="btn-secondary"
-        >
-          打开开发者登录
-        </Link>
-      </div>
+      <PageHeader
+        title="开发者"
+        description="创建开发者账号、启停权限与重置密码；开发者从统一登录入口进入自己的控制台"
+        actions={
+          <Link href="/login" target="_blank" rel="noreferrer" className="btn-secondary">
+            打开统一登录页
+          </Link>
+        }
+      />
 
       <DevelopersManager developers={developers} />
     </div>

@@ -229,11 +229,11 @@ model Release {
 
 ### 5.2 管理接口
 
-鉴权：`POST /api/admin/login` 成功后下发 HS256 JWT（`jose`），存 `HttpOnly; SameSite=Lax; Path=/` Cookie，有效期 7 天；所有 `/api/admin/*` 与 `/admin/*` 页面统一校验。登录失败按 IP 限流（5 次/5 分钟，内存计数）。
+鉴权：`POST /api/auth/login` 统一校验管理员与开发者账号，成功后下发 HS256 JWT（`jose`），存 `HttpOnly; SameSite=Lax; Path=/` Cookie（`appstore_session`），有效期 7 天；管理员与开发者共用该 Cookie，角色由令牌载荷 `role` 区分，`/api/auth/*` 负责登录、登出与改密。登录失败按 IP 限流（5 次/5 分钟，内存计数）。
 
 | 方法与路径 | 说明 |
 |---|---|
-| `POST /api/admin/login` | body `{username,password}`，bcrypt 校验（cost 12） |
+| `POST /api/auth/login` | body `{username,password}`，bcrypt 校验（cost 12），返回 `role` 与 `redirectTo` |
 | `POST /api/admin/logout` | 清除 Cookie |
 | `GET /api/admin/apps` | 后台列表（含草稿、私有） |
 | `POST /api/admin/apps` | 创建应用（JSON），`type=ANDROID` 必填 `packageName` |
@@ -377,7 +377,7 @@ SESSION_SECRET=<32 字节随机串>
 ADMIN_USERNAME=admin
 ADMIN_PASSWORD=<首次初始化明文，仅用于 scripts/init-admin.ts>
 MAX_APK_MB=200
-NEXT_PUBLIC_SITE_NAME=我的应用仓库
+NEXT_PUBLIC_SITE_NAME=应用仓库
 ```
 
 - 内网试用期允许明文 HTTP；Flutter 客户端 `network_security_config` 仅对内网 IP 开明文，上线切 HTTPS 后移除。

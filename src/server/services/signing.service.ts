@@ -30,20 +30,23 @@ export interface SignedDownload {
  * @param releaseId 版本 ID
  * @param ttlSeconds 有效期，默认 600 秒
  * @param now 当前毫秒时间戳，便于测试注入
+ * @param origin 当前部署的站点根地址，缺省时回退 BASE_URL
  * @returns 相对路径、绝对地址与过期时间
  */
 export function signDownloadPath(
   releaseId: string,
   ttlSeconds = SIGN_TTL_SECONDS,
   now = Date.now(),
+  origin?: string,
 ): SignedDownload {
   const expiresAt = Math.floor(now / 1000) + ttlSeconds;
   const signature = computeSignature(releaseId, expiresAt);
   const path = `/api/download/${releaseId}?exp=${expiresAt}&sig=${signature}`;
+  const base = (origin ?? getEnv().BASE_URL).replace(/\/+$/, "");
 
   return {
     path,
-    url: new URL(path, getEnv().BASE_URL).toString(),
+    url: new URL(path, base).toString(),
     expiresAt,
   };
 }

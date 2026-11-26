@@ -1,6 +1,6 @@
 # 部署与运维指南
 
-适用于个人/内网自建场景：Next.js 服务端 + SQLite + 本地文件存储。按本文步骤可在干净目录完成启动与首次发版。
+适用于个人/内网/云服务器自建场景：Next.js 服务端 + SQLite + 本地文件存储。按本文步骤可在干净目录或容器中完成启动与首次发版。
 
 ## 1. 环境要求
 
@@ -36,11 +36,11 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 
 | 变量 | 必填 | 说明 |
 |---|---|---|
-| `BASE_URL` | 是 | 对外基地址。内网试用填本机局域网地址，如 `http://192.168.1.10:3000`；下载签名链接与客户端地址重写依赖它 |
+| `BASE_URL` | 否 | 站点兜底基地址。页面展示、下载签名链接与 SEO 地址会优先根据请求头（Host / X-Forwarded-Host / X-Forwarded-Proto）自动推导，仅在无请求上下文时使用该值；HTTPS 部署时建议仍填 `https://你的域名` 作为协议兜底 |
 | `DATABASE_URL` | 是 | 默认 `file:../data/appstore.db`，相对 `prisma/schema.prisma` 解析 |
 | `STORAGE_DIR` | 是 | 文件根目录，默认 `./storage` |
 | `DOWNLOAD_SIGN_SECRET` | 是 | 下载链接 HMAC 密钥，32 字节随机十六进制 |
-| `SESSION_SECRET` | 是 | 管理后台会话签名密钥，32 字节随机十六进制 |
+| `SESSION_SECRET` | 是 | 统一会话签名密钥，管理员与开发者共用同一登录入口，角色由令牌载荷区分；32 字节随机十六进制 |
 | `ADMIN_USERNAME` / `ADMIN_PASSWORD` | 初始化时 | 仅 `npm run init-admin` 读取，初始化后可删除 `ADMIN_PASSWORD` 并重启 |
 | `MAX_APK_MB` | 否 | 单次上传上限，默认 200 |
 | `NEXT_PUBLIC_SITE_NAME` | 否 | 前台站点标题 |
@@ -71,10 +71,56 @@ npm run build
 npm start
 ```
 
+`next.config.ts` 在容器构建时（`BUILD_STANDALONE=1`）输出 `.next/standalone`，可直接：
+
+```bash
+BUILD_STANDALONE=1 npm run build
+node .next/standalone/server.js
+```
+
+（使用 standalone 运行时，需把 `public/` 与 `.next/static/` 复制到对应位置；Next 16 的 `next start` 不兼容 standalone，因此普通服务器部署请保持默认构建并执行 `npm start`。）
+
 默认监听 `3000` 端口并允许局域网访问（启动日志会打印 Network 地址）。首次访问：
 
-- 前台：`http://<主机IP>:3000/`
-- 后台：`http://<主机IP>:3000/admin/login`
+- 宣传首页：`http://<主机IP>:3000/`
+- 应用广场：`http://<主机IP>:3000/apps`
+- 接入文档：`http://<主机IP>:3000/docs`
+- 统一登录：`http://<主机IP>:3000/login`（管理员与开发者共用，登录后按角色进入对应控制台）
+
+## 5.1 使用 Docker 部署
+
+仓库内置多阶段 `Dockerfile` 与 `.dockerignore`。SQLite 数据库与上传文件必须放在容器外的数据卷中：
+
+```bash
+# 1. 准备数据目录（首次）
+mkdir -p data storage
+
+# 2. 在宿主机执行数据库迁移（使用仓库依赖，避免镜像内安装 Prisma CLI）
+npx prisma migrate deploy
+
+# 3. 构建镜像
+docker build -t appstore:latest .
+
+# 4. 运行容器
+docker run -d --name appstore \
+  -p 3000:3000 \
+  -v "$PWD/data:/app/data" \
+  -v "$PWD/storage:/app/storage" \
+  -e BASE_URL=https://store.example.com \
+  -e DATABASE_URL="file:/app/data/appstore.db" \
+  -e STORAGE_DIR=/app/storage \
+  -e DOWNLOAD_SIGN_SECRET=<32 字节随机串> \
+  -e SESSION_SECRET=<32 字节随机串> \
+  -e NEXT_PUBLIC_SITE_NAME=应用仓库 \
+  appstore:latest
+```
+
+说明：
+
+- `DATABASE_URL` 在容器内使用绝对路径 `/app/data/appstore.db`，与挂载卷对应。
+- 升级时先备份 `data/` 与 `storage/`，重新 `docker build` 后替换容器即可。
+- 初次 `init-admin` 可在宿主机执行：`npm run init-admin`，读写同一份数据库。
+- 反向代理需放行较大的请求体（APK 上传），并保留 `X-Forwarded-For` 以便登录限流正确识别来源。
 
 ## 6. 内网访问与防火墙
 
@@ -85,7 +131,7 @@ npm start
 
 ## 7. 首次发版流程
 
-1. 打开 `/admin/login` 登录。
+1. 打开 `/login`（管理员与开发者共用入口），登录后按账号角色自动进入 `/admin/apps` 或 `/developer/apps`。
 2. 「新建应用」：填写名称、slug、简介、类型（Android 需包名），保存。
 3. 应用详情页上传 APK（流式上传，自动解析版本号/包名/图标并校验大小与类型）。
 4. 上传图标与截图（可选）。
@@ -141,7 +187,7 @@ server {
 
 切换后：
 
-1. `.env` 中 `BASE_URL=https://store.example.com`，重启服务。
+1. `.env` 中 `BASE_URL=https://store.example.com`，重启服务。会话 Cookie 会自动切换为 `Secure`，旧 HTTP 会话需重新登录。
 2. 客户端「设置」页改为 HTTPS 地址。
 3. 如不再需要 HTTP，可关闭 3000 端口的外部访问。
 

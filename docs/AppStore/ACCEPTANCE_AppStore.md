@@ -10,7 +10,7 @@
 | T01 工程骨架 | `npm run typecheck` 0 error | 通过 | `next typegen && tsc --noEmit`，退出码 0 |
 | T01 | `npm run lint` 0 error / 0 warning | 通过 | 无输出，退出码 0 |
 | T01 | `npm run build` 成功 | 通过 | 编译 5.0s，静态页 4/4 |
-| T01 | 首页返回 200 | 通过 | `Invoke-WebRequest` STATUS=200，页面含「我的应用仓库」 |
+| T01 | 首页返回 200 | 通过 | `Invoke-WebRequest` STATUS=200，页面含站点标题 |
 | T01 | `.env` 不被跟踪、`.env.example` 可提交 | 通过 | `.gitignore` 增加 `!.env.example` 与 `/data/`、`/storage/` |
 | T02 数据模型 | 迁移成功、表结构含 AdminUser/App/Release | 通过 | `prisma migrate dev --name init` 生成 `20261125085723_init` |
 | T02 | `init-admin` 幂等写入管理员 | 通过 | 首次执行输出「管理员账号已就绪：admin」 |
@@ -282,3 +282,35 @@ HTTP 冒烟实测明细（种子数据：`smoke-pack`，真实 APK 4026 版，�
 | 接入文档 | 通过 | 开发者门户新增 `/developer/docs`：接口地址、参数表、响应示例、forceUpdate 语义、Kotlin/Flutter 示例 |
 | 文档同步 | 通过 | `docs/AppStore/API_AppStore.md` 补充 minSupportedVersionCode、限流、开发者接口清单；`/api/openapi` 更新响应 schema |
 | 验证 | 通过 | `npm test` 58/58；`typecheck`、`lint`、`build` 通过；`/developer/docs` 登录后返回 200 |
+
+### 站点改版与统一登录（B15）
+
+| 项目 | 结果 | 证据 |
+|---|---|---|
+| 统一会话 | 通过 | 管理员与开发者共用 `appstore_session` Cookie；管理员令牌载荷为 `{sub:"admin",username,role:"admin"}`，开发者令牌仍使用派生密钥，两个方向互不通用（既有单测通过）；`getSession()` 依次验签并返回角色 |
+| 统一登录接口 | 通过 | 新增 `POST /api/auth/login`、`/api/auth/logout`、`/api/auth/password`，删除 `/api/admin/login|logout|password` 与 `/api/dev/*` 对应路由；实测 admin 返回 `role=admin`、devtest 返回 `role=developer`，错误账号 401 |
+| 登录页与分流 | 通过 | 新增 `/login` 玻璃卡片垂直居中；登录后 admin→`/admin/apps`、developer→`/developer/apps`，支持 `?next=` 且仅允许同角色区域；已登录访问 `/login` 自动跳转对应控制台 |
+| 旧入口兼容 | 通过 | `/admin/login`、`/developer/login` 返回 307 到 `/login`；`/developer/docs` 重定向到公开 `/docs` |
+| 角色隔离 | 通过 | 携带开发者 Cookie 访问 `/admin/apps`、携带管理员 Cookie 访问 `/developer/apps` 均触发登录重定向，响应不含对方业务数据 |
+| 宣传首页 | 通过 | 新增 `/`：Hero、接口预览、平台统计、精选应用、能力网格、三步接入与底部 CTA；浏览器验证无水平滚动 |
+| 应用广场迁移 | 通过 | `/apps` 复用筛选、搜索、分类标签与排序逻辑；浏览器验证桌面与 390px 窄屏均无页面级横向溢出 |
+| 详情页重构 | 通过 | `/apps/[slug]` 改为应用头部 + 截图/介绍/更新日志/历史版本 + 右侧信息卡（包名、大小、最低系统、SHA-256、发布时间） |
+| 公开接入文档 | 通过 | `/docs` 含目录、接口参数、响应字段、强制更新语义、cURL/Java/Kotlin/Flutter/React Native/Node.js/Python/Go/C# 九种示例、下载校验、错误码与 FAQ；浏览器验证语言切换可用 |
+| 视觉系统 | 通过 | `globals.css` 新增 `surface`、`page-header`、`chip`、`code-block`、`empty-state`、`gradient-text`、`hero-glow` 等组件类与圆角/阴影令牌；新增 SiteHeader/SiteFooter/PageHeader/StatCard/EmptyState/CodeTabs |
+| 后台视觉统一 | 通过 | 管理员与开发者页面标题区统一为 `PageHeader`，统计与空态复用共享组件，详情页区块改用 `surface` |
+| 部署准备 | 通过 | `next.config.ts` 开启 `output: "standalone"`；新增 `Dockerfile`、`.dockerignore`；`.env.example` 与 DEPLOY 补充统一会话、数据卷、反向代理与 HTTPS 说明；sitemap 增加 `/apps`、`/docs` |
+| 验证 | 通过 | `npm run typecheck`、`npm run lint`、`npm test`（58/58）、`npm run build` 全部通过；生产服务逐页走查 `/`、`/apps`、`/apps/appstore-client`、`/docs`、`/login` 均 200 |
+
+### 后台改版与细节优化（B16）
+
+| 项目 | 结果 | 证据 |
+|---|---|---|
+| 后台布局 | 通过 | 管理员与开发者共用 `ConsoleShell`：768px 起固定左侧栏（分组导航、用户卡片、等宽操作按钮），窄屏改为三列等分导航 |
+| 导航高亮 | 通过 | 按最长前缀匹配，`/admin/apps/new` 只高亮「新建应用」，不再同时选中「应用管理」；浏览器实测通过 |
+| 按钮规范 | 通过 | 主/次按钮统一最小高度与圆角；并排按钮使用 `btn-group` 等分；侧边栏六个导航项宽度实测均为 231.2px |
+| 固定滚动条 | 通过 | `html` 启用 `scrollbar-gutter: stable` 与 `overflow-y: scroll`，切换后台标签页不再抖动 |
+| 设置页居中 | 通过 | 管理员与开发者设置页均为 `flex items-center justify-center`，密码卡片最大宽度 576px，水平垂直居中 |
+| 操作日志 | 通过 | 新增 `ip` 字段迁移；20 条/页分页、来源 IP 列展示完整转发链；新增 `DELETE /api/admin/logs` 与二次确认清除按钮，实测清除 50 条并写入清空记录 |
+| 站点地址自动推导 | 通过 | 新增 `originFromRequest` / `getRequestOrigin`；`/docs`、首页接口预览、OpenAPI、robots、sitemap、更新检查下载链接均按请求头生成，实测 `Host=apps.example.com` + `X-Forwarded-Proto=https` 输出正确 |
+| 品牌与文案 | 通过 | 产品名统一为「应用仓库」，移除「私有部署」措辞，改为「数据存储在自建服务器上」 |
+| 验证 | 通过 | `typecheck`、`lint`、`test`（58/58）、`build` 全部通过；新增迁移 `20261126084617_add_audit_log_ip` 已应用 |

@@ -1,5 +1,6 @@
 import { connection } from "next/server";
 import { z } from "zod";
+import { originFromRequest } from "@/server/http/base-url";
 import { clientKeyFrom } from "@/server/http/session";
 import { UPDATE_CHECK_RATE_LIMIT } from "@/server/infra/constants";
 import { AppError, toErrorResponse } from "@/server/infra/errors";
@@ -62,7 +63,11 @@ export async function GET(request: Request): Promise<Response> {
       throw new AppError("VALIDATION_FAILED", "packageName 与 versionCode 必须同时提供");
     }
 
-    const result = await evaluateUpdate(parsed.data.packageName, parsed.data.versionCode);
+    const result = await evaluateUpdate(
+      parsed.data.packageName,
+      parsed.data.versionCode,
+      originFromRequest(request),
+    );
     return Response.json(result, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     return toErrorResponse(error);

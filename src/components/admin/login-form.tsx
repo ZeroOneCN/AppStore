@@ -3,20 +3,37 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+/** 统一登录响应 */
+type LoginResponse = {
+  role?: "admin" | "developer";
+  redirectTo?: string;
+};
+
 /**
- * 登录表单，管理员与开发者门户共用。
+ * 判断登录目标地址是否属于该角色的控制台区域。
+ * @param target 目标路径
+ * @param role 角色
+ * @returns 允许跳转返回 true
+ */
+function isAllowedTarget(target: string | null, role: "admin" | "developer"): target is string {
+  if (!target || !target.startsWith("/")) return false;
+  return role === "admin" ? target.startsWith("/admin") : target.startsWith("/developer");
+}
+
+/**
+ * 统一登录表单，管理员与开发者共用同一入口，登录后按角色跳转。
+ * @param props.next 登录成功后希望返回的站内路径（仅在角色匹配时生效）
  * @param props.endpoint 登录接口地址
- * @param props.redirectTo 登录成功后跳转路径
- * @param props.submitLabel 提交按钮文案前缀
+ * @param props.submitLabel 提交按钮文案
  * @returns 登录表单
  */
 export function LoginForm({
-  endpoint = "/api/admin/login",
-  redirectTo = "/admin/apps",
+  next = null,
+  endpoint = "/api/auth/login",
   submitLabel = "登录",
 }: {
+  next?: string | null;
   endpoint?: string;
-  redirectTo?: string;
   submitLabel?: string;
 }) {
   const router = useRouter();
@@ -26,7 +43,7 @@ export function LoginForm({
   const [error, setError] = useState<string | null>(null);
 
   /**
-   * 提交登录请求，成功后进入应用管理页。
+   * 提交登录请求，成功后按返回的角色进入对应控制台。
    * @param event 表单提交事件
    * @returns 无
    */
@@ -51,7 +68,12 @@ export function LoginForm({
         return;
       }
 
-      router.replace(redirectTo);
+      const data = payload as LoginResponse | null;
+      const role = data?.role === "developer" ? "developer" : "admin";
+      const fallback = role === "admin" ? "/admin/apps" : "/developer/apps";
+      const target = isAllowedTarget(next, role) ? next : data?.redirectTo || fallback;
+
+      router.replace(target);
       router.refresh();
     } catch {
       setError("网络异常，请检查连接后重试");
@@ -99,11 +121,7 @@ export function LoginForm({
         </p>
       ) : null}
 
-      <button
-        type="submit"
-        disabled={loading}
-        className="btn-primary w-full"
-      >
+      <button type="submit" disabled={loading} className="btn-primary w-full">
         {loading ? "登录中…" : submitLabel}
       </button>
     </form>

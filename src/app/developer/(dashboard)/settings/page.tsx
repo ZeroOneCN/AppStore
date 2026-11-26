@@ -1,6 +1,7 @@
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { PasswordForm } from "@/components/admin/password-form";
+import { PageHeader } from "@/components/page-header";
 import { requireDeveloperPage } from "@/server/http/guards";
 
 /**
@@ -12,19 +13,11 @@ async function DeveloperSettingsContent() {
   const session = await requireDeveloperPage();
 
   return (
-    <div className="w-full max-w-4xl">
-      <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">账号设置</h1>
-      <p className="mt-1 mb-6 text-sm text-neutral-500 dark:text-neutral-400">
-        当前登录：{session.username}
-      </p>
-
-      <h2 className="mb-3 text-sm font-semibold text-neutral-500 dark:text-neutral-400">修改密码</h2>
-      <PasswordForm
-        endpoint="/api/dev/password"
-        logoutEndpoint="/api/dev/logout"
-        loginPath="/developer/login"
-        note="修改成功后当前会话会退出，需使用新密码重新登录开发者门户。"
-      />
+    <div className="flex flex-1 items-center justify-center py-6">
+      <div className="w-full max-w-xl">
+        <PageHeader title="账号设置" description={`当前登录：${session.username}`} />
+        <PasswordForm note="修改成功后当前会话会退出，需使用新密码重新登录开发者门户。" />
+      </div>
     </div>
   );
 }
@@ -37,9 +30,9 @@ export default function DeveloperSettingsPage() {
   return (
     <Suspense
       fallback={
-        <div className="w-full max-w-4xl animate-pulse space-y-4">
-          <div className="h-8 w-40 rounded bg-neutral-200 dark:bg-neutral-800" />
-          <div className="h-64 rounded-2xl bg-neutral-200 dark:bg-neutral-800" />
+        <div className="w-full max-w-xl animate-pulse space-y-4">
+          <div className="h-8 w-40 rounded bg-black/[0.06] dark:bg-white/10" />
+          <div className="h-64 rounded-[22px] bg-black/[0.05] dark:bg-white/[0.07]" />
         </div>
       }
     >

@@ -106,6 +106,8 @@ model AuditLog {
   target    String   @default("")
   /// 补充说明
   detail    String   @default("")
+  /// 来源 IP（反向代理场景记录完整转发链）
+  ip        String   @default("")
   createdAt DateTime @default(now())
 
   @@index([createdAt])

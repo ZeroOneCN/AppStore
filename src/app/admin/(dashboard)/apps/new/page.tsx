@@ -2,6 +2,7 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { AppForm } from "@/components/admin/app-form";
+import { PageHeader } from "@/components/page-header";
 import { listAdminFacets } from "@/server/services/app.service";
 import { listDevelopers } from "@/server/services/developer.service";
 import { requireAdminPage } from "@/server/http/guards";
@@ -23,12 +24,10 @@ async function NewAppContent() {
       >
         ← 返回应用列表
       </Link>
-      <div className="mb-5 mt-3">
-        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">新建应用</h1>
-        <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
-          先填写基础信息，创建后即可上传 APK、图标与截图
-        </p>
-      </div>
+      <PageHeader
+        title="新建应用"
+        description="先填写基础信息，创建后即可上传 APK、图标与截图"
+      />
       <AppForm
         mode="create"
         categories={facets.categories}

@@ -16,11 +16,8 @@ export const SIGN_TTL_SECONDS = 600;
 /** 管理后台会话有效期（秒），7 天 */
 export const SESSION_TTL_SECONDS = 7 * 24 * 60 * 60;
 
-/** 会话 Cookie 名称 */
+/** 统一会话 Cookie 名称：管理员与开发者共用 */
 export const SESSION_COOKIE = "appstore_session";
-
-/** 开发者门户会话 Cookie 名称 */
-export const DEVELOPER_SESSION_COOKIE = "appstore_dev_session";
 
 /** 开发者账号状态：启用 / 停用 */
 export const DEVELOPER_STATUSES = ["ACTIVE", "DISABLED"] as const;

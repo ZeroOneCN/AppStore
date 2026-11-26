@@ -1,15 +1,40 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
-import { BrandLogo } from "@/components/brand-logo";
-import { LogoutButton } from "@/components/admin/logout-button";
-import { ThemeToggle } from "@/components/theme-toggle";
-import { DevNav } from "@/components/developer/dev-nav";
+import { ConsoleShell } from "@/components/console/console-shell";
+import type { ConsoleNavItem } from "@/components/console/console-nav";
 import { requireDeveloper } from "@/server/http/session";
 
+/** 开发者导航配置 */
+const NAV_ITEMS: ConsoleNavItem[] = [
+  {
+    href: "/developer/apps",
+    label: "我的应用",
+    group: "应用",
+    icon: "M4 4h7v7H4V4Zm9 0h7v7h-7V4ZM4 13h7v7H4v-7Zm9 0h7v7h-7v-7Z",
+  },
+  {
+    href: "/developer/apps/new",
+    label: "新建应用",
+    group: "应用",
+    icon: "M4 5h16v14H4V5Zm8 3v8m-4-4h8",
+  },
+  {
+    href: "/docs",
+    label: "接入文档",
+    group: "资源",
+    icon: "M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3V4Zm4 4h7M9 12h7",
+  },
+  {
+    href: "/developer/settings",
+    label: "账号设置",
+    group: "资源",
+    icon: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM5 21a7 7 0 0 1 14 0",
+  },
+];
+
 /**
- * 开发者门户外壳：校验开发者会话并渲染导航。
+ * 开发者门户外壳：校验开发者会话并渲染统一控制台布局。
  * @param props.children 页面内容
  * @returns 门户布局
  */
@@ -20,37 +45,18 @@ async function DeveloperShell({ children }: { children: React.ReactNode }) {
   try {
     username = (await requireDeveloper()).username;
   } catch {
-    redirect("/developer/login");
+    redirect("/login?next=%2Fdeveloper%2Fapps");
   }
 
   return (
-    <div className="flex min-h-screen flex-col text-neutral-900 dark:text-neutral-50">
-      <header className="glass-bar sticky top-0 z-20">
-        <div className="page-shell flex h-14 items-center justify-between gap-3 sm:h-16">
-          <div className="flex min-w-0 items-center gap-3 sm:gap-4">
-            <Link href="/developer/apps" className="flex shrink-0 items-center gap-2">
-              <BrandLogo size={28} />
-              <span className="text-[15px] font-semibold tracking-tight">开发者门户</span>
-            </Link>
-            <DevNav />
-          </div>
-          <div className="flex shrink-0 items-center gap-2 text-xs">
-            <span className="hidden text-neutral-500 sm:inline dark:text-neutral-400">{username}</span>
-            <ThemeToggle />
-            <Link
-              href="/"
-              target="_blank"
-              rel="noreferrer"
-              className="rounded-full border border-black/10 px-2.5 py-1.5 transition hover:bg-white/70 dark:border-white/12 dark:hover:bg-white/10"
-            >
-              查看前台
-            </Link>
-            <LogoutButton endpoint="/api/dev/logout" redirectTo="/developer/login" />
-          </div>
-        </div>
-      </header>
-      <main className="page-shell flex flex-1 flex-col py-8 sm:py-10">{children}</main>
-    </div>
+    <ConsoleShell
+      consoleName="开发者门户"
+      items={NAV_ITEMS}
+      username={username}
+      roleLabel="开发者"
+    >
+      {children}
+    </ConsoleShell>
   );
 }
 

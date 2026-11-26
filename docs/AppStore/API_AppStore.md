@@ -105,9 +105,9 @@ curl "$BASE_URL/api/public/apps?type=ANDROID&sort=downloads"
 
 | 方法与路径 | 说明 |
 |---|---|
-| `POST /api/admin/login` | `{ "username", "password" }`，连续失败会触发限流（429） |
-| `POST /api/admin/logout` | 清除会话 Cookie |
-| `POST /api/admin/password` | `{ "currentPassword", "newPassword" }`，新密码至少 8 位 |
+| `POST /api/auth/login` | 管理员与开发者统一登录：`{ "username", "password" }`，返回 `role` 与 `redirectTo`，连续失败会触发限流（429） |
+| `POST /api/auth/logout` | 清除统一会话 Cookie |
+| `POST /api/auth/password` | `{ "currentPassword", "newPassword" }`，按会话角色修改管理员或开发者密码，新密码至少 8 位 |
 | `GET /api/admin/apps` | 全部应用（含私有与草稿） |
 | `POST /api/admin/apps` | 创建应用；`slug` 重复时自动追加序号，包名重复报 400 |
 | `PUT /api/admin/apps/{id}` | 更新应用，仅传需要修改的字段 |
@@ -123,12 +123,12 @@ curl "$BASE_URL/api/public/apps?type=ANDROID&sort=downloads"
 
 ## 四、开发者接口
 
-开发者登录使用独立 Cookie（`appstore_dev_session`），与管理员会话互不通用；所有接口只能操作归属自己的应用。
+管理员与开发者共用统一会话 Cookie（`appstore_session`），角色由令牌载荷区分；开发者接口只能操作归属自己的应用。
 
 | 方法与路径 | 说明 |
 |---|---|
-| `POST /api/dev/login` | `{ "username", "password" }`，失败限流同管理员 |
-| `POST /api/dev/logout` / `POST /api/dev/password` | 登出 / 修改自己的密码 |
+| `POST /api/auth/login` | 统一登录；使用开发者账号登录时返回 `role=developer` |
+| `POST /api/auth/logout` / `POST /api/auth/password` | 统一登出 / 修改自己的密码 |
 | `GET/POST /api/dev/apps` | 我的应用列表 / 创建应用（归属自动写入） |
 | `GET/PUT /api/dev/apps/{id}` | 应用详情与版本记录 / 更新基础资料 |
 | `POST /api/dev/apps/{id}/releases` | 二进制流上传 APK，解析成功后自动发布为当前版本 |
@@ -139,7 +139,7 @@ curl "$BASE_URL/api/public/apps?type=ANDROID&sort=downloads"
 上传示例：
 
 ```bash
-curl -c cookies.txt -X POST "$BASE_URL/api/admin/login" \
+curl -c cookies.txt -X POST "$BASE_URL/api/auth/login" \
   -H "Content-Type: application/json" \
   -d '{"username":"admin","password":"…"}'
 

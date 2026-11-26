@@ -58,7 +58,7 @@ export async function saveScreenshot(buffer: Buffer, appId: string): Promise<str
   ensureStorageDirs();
   const dir = storagePath("screenshots", appId);
   await fs.mkdir(dir, { recursive: true });
-  const destination = path.join(dir, `${randomUUID()}.${extension}`);
+  const destination = path.join(/*turbopackIgnore: true*/ dir, `${randomUUID()}.${extension}`);
   await sharp(buffer).toFile(destination);
   return toStoredPath(destination);
 }

@@ -1,13 +1,17 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
+/** 站点元数据：社交分享使用 BASE_URL 作为兜底，页面内地址按请求头自动推导 */
+const siteUrl = process.env.BASE_URL ?? "http://localhost:3000";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: {
-    default: "我的应用仓库",
-    template: "%s · 我的应用仓库",
+    default: "应用仓库",
+    template: "%s · 应用仓库",
   },
-  description: "个人应用与网页作品的分发展示中心",
-  applicationName: "我的应用仓库",
+  description: "应用分发中心：托管 Android 安装包与网页作品，支持版本管理、签名下载与客户端更新检查。",
+  applicationName: "应用仓库",
   appleWebApp: {
     capable: true,
     title: "应用仓库",
