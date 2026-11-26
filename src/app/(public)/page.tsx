@@ -80,7 +80,7 @@ async function HomeContent() {
         <div className="hero-glow -top-24 left-1/2 h-72 w-[520px] -translate-x-1/2" />
 
         <div className="relative grid items-center gap-10 lg:grid-cols-[1.05fr_0.95fr]">
-          <div>
+          <div className="min-w-0">
             <span className="chip">
               <span className="h-1.5 w-1.5 rounded-full bg-brand" />
               应用分发中心
@@ -112,7 +112,7 @@ async function HomeContent() {
             </dl>
           </div>
 
-          <div className="relative">
+          <div className="relative min-w-0">
             <div className="surface p-5 sm:p-6" style={{ boxShadow: "var(--shadow-float)" }}>
               <div className="flex items-center justify-between">
                 <p className="text-[13px] font-semibold">客户端检查更新</p>

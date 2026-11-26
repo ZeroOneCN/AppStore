@@ -1,6 +1,6 @@
 # ACCEPTANCE — 个人应用商店（AppStore）
 
-> 阶段：Phase 5 Automate｜最后更新：2026-11-25
+> 阶段：Phase 5 Automate｜最后更新：2026-11-26
 > 说明：逐任务记录实测结果。未实测项必须显式标注，不得以推断代替。
 
 ## B1（T01–T06）
@@ -367,3 +367,18 @@ HTTP 冒烟实测明细（种子数据：`smoke-pack`，真实 APK 4026 版，�
 | 表单示例 | 通过 | 应用名称占位改为「例如：应用仓库」 |
 | 安全回归 | 通过 | 开发者接口同步启用 http(s) 链接与包名校验，`javascript:` 链接返回 400 |
 | 验证 | 通过 | `typecheck`、`lint`、`test`（58/58）、`build` 全部通过 |
+
+### 手机端尺寸适配（B21）
+
+> 实测方式：Chrome DevTools Protocol `Emulation.setDeviceMetricsOverride`（390×844、DPR 2、mobile），逐页输出 `documentElement.scrollWidth` 与越界元素并截图；不使用 `--window-size=390` 的 headless 截图（Windows 最小窗口宽度会污染结论）。
+
+| 项目 | 结果 | 证据 |
+|---|---|---|
+| 前台导航 | 通过 | `SiteHeader` 移动端改为双行：首行品牌 + 登录，次行导航独立一行；品牌不再截断为「应用…」，登录按钮不被挤出；桌面仍单行 |
+| 首页 Hero | 通过 | Hero 左右两列补 `min-w-0`，接口预览 `pre` 不再把网格单列撑到 445px；此前被 `overflow-hidden` 裁切的标题、简介、按钮与统计卡已完整显示 |
+| 前台页面 | 通过 | `/`、`/apps`、`/apps/appstore-client`、`/docs`、`/login` 在 390px 下 `scrollWidth=390`，无页面级横向滚动；越界元素仅剩装饰性 `hero-glow`（被容器裁切）与文档表格（位于 `overflow-x-auto` 容器内可横向滚动） |
+| 代码块与表格 | 通过 | `/docs` 与开发者内嵌文档的 `pre.code-block` 宽度 308px、`scrollWidth` 534–637px 且 `overflow-x:auto`；参数表格父容器 `overflow-x:auto`，均为容器内滚动而非页面溢出 |
+| 管理员后台 | 通过 | `/admin/apps`、`/admin/apps/new`、`/admin/apps/[id]`、`/admin/logs`、`/admin/settings`、`/admin/stats`、`/admin/developers` 在 390px 下均无页面级横向溢出；操作日志 820px 宽表格在 `overflow-x-auto` 容器内滚动 |
+| 开发者后台 | 通过 | `/developer/apps`、`/developer/apps/new`、`/developer/apps/[id]`、`/developer/settings`、`/developer/docs` 同上；版本列表行在窄屏纵向堆叠、操作按钮自动换行 |
+| 骨架屏 | 通过 | `SiteHeaderSkeleton` 同步双行高度，会话读取期间无布局跳动 |
+| 验证 | 通过 | `npm run typecheck`、`npm run lint`、`npm test`（10 文件 / 58 用例）、`npm run build` 全部通过；构建后以 `npm start` 复测全部页面 |

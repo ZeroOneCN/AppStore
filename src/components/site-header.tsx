@@ -21,19 +21,28 @@ export async function SiteHeader() {
 
   return (
     <header className="glass-bar sticky top-0 z-30">
-      <div className="page-shell flex h-16 items-center justify-between gap-4">
-        <div className="flex min-w-0 items-center gap-5">
-          <Link href="/" className="group flex min-w-0 items-center gap-2.5">
-            <BrandLogo size={30} className="transition group-hover:scale-105" />
-            <span className="truncate text-[15px] font-semibold tracking-tight">{siteName}</span>
-          </Link>
-          <SiteNav />
+      <div className="page-shell">
+        <div className="flex h-14 items-center justify-between gap-3 sm:h-16">
+          <div className="flex min-w-0 items-center gap-5">
+            <Link href="/" className="group flex min-w-0 items-center gap-2.5">
+              <BrandLogo size={30} className="shrink-0 transition group-hover:scale-105" />
+              <span className="truncate text-[15px] font-semibold tracking-tight">{siteName}</span>
+            </Link>
+            <div className="hidden sm:block">
+              <SiteNav />
+            </div>
+          </div>
+
+          <div className="flex shrink-0 items-center gap-2">
+            <Link href={consoleHref} className="btn-primary px-4 py-2 text-[13px]">
+              {consoleLabel}
+            </Link>
+          </div>
         </div>
 
-        <div className="flex shrink-0 items-center gap-2">
-          <Link href={consoleHref} className="btn-primary px-4 py-2 text-[13px]">
-            {consoleLabel}
-          </Link>
+        {/* 移动端：导航独占一行，避免品牌、导航与登录按钮挤在一行 */}
+        <div className="border-t border-black/[0.05] py-1.5 sm:hidden dark:border-white/[0.08]">
+          <SiteNav />
         </div>
       </div>
     </header>
@@ -47,12 +56,17 @@ export async function SiteHeader() {
 export function SiteHeaderSkeleton() {
   return (
     <header className="glass-bar sticky top-0 z-30">
-      <div className="page-shell flex h-16 items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <span className="h-[30px] w-[30px] rounded-[22%] bg-black/[0.08] dark:bg-white/10" />
-          <span className="h-4 w-24 rounded bg-black/[0.06] dark:bg-white/10" />
+      <div className="page-shell">
+        <div className="flex h-14 items-center justify-between gap-3 sm:h-16">
+          <div className="flex items-center gap-3">
+            <span className="h-[30px] w-[30px] rounded-[22%] bg-black/[0.08] dark:bg-white/10" />
+            <span className="h-4 w-24 rounded bg-black/[0.06] dark:bg-white/10" />
+          </div>
+          <span className="h-8 w-20 rounded-full bg-black/[0.06] dark:bg-white/10" />
         </div>
-        <span className="h-8 w-20 rounded-full bg-black/[0.06] dark:bg-white/10" />
+        <div className="border-t border-black/[0.05] py-2 sm:hidden dark:border-white/[0.08]">
+          <span className="block h-7 w-44 rounded-full bg-black/[0.06] dark:bg-white/10" />
+        </div>
       </div>
     </header>
   );
