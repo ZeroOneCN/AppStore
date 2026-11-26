@@ -31,7 +31,7 @@ interface FormState {
  * @param props.tagOptions 已有标签，用于一键补充
  * @param props.apiBase 应用接口前缀，默认管理员接口
  * @param props.afterCreateBase 创建成功后跳转的应用详情路径前缀
- * @param props.showAdminFields 是否展示可见性、置顶与归属开发者等管理员字段
+ * @param props.showAdminFields 是否展示置顶与归属开发者等管理员字段（可见性对开发者开放）
  * @param props.developerOptions 可指派开发者与当前归属应用列表
  * @returns 表单界面
  */
@@ -44,7 +44,6 @@ export function AppForm({
   afterCreateBase = "/admin/apps",
   showAdminFields = true,
   developerOptions = [],
-  developerLabel = "当前开发者账号",
 }: {
   mode: "create" | "edit";
   app?: AdminAppData;
@@ -54,7 +53,6 @@ export function AppForm({
   afterCreateBase?: string;
   showAdminFields?: boolean;
   developerOptions?: { id: string; username: string; displayName: string }[];
-  developerLabel?: string;
 }) {
   const router = useRouter();
   const [form, setForm] = useState<FormState>({
@@ -151,10 +149,11 @@ export function AppForm({
       packageName: form.type === "ANDROID" ? form.packageName.trim() || null : null,
     };
     if (showAdminFields) {
-      payload.visibility = form.visibility;
       payload.pinned = form.pinned;
       payload.developerId = form.developerId || null;
     }
+    // 可见性由开发者自行决定，管理员与开发者都可提交
+    payload.visibility = form.visibility;
 
     try {
       const response = await fetch(mode === "create" ? apiBase : `${apiBase}/${app?.id}`, {
@@ -200,7 +199,7 @@ export function AppForm({
               value={form.name}
               onChange={(event) => updateName(event.target.value)}
               className={inputClass}
-              placeholder="例如：包裹管家"
+              placeholder="例如：应用仓库"
             />
           </div>
 
@@ -313,6 +312,26 @@ export function AppForm({
               </div>
             ) : null}
           </div>
+
+          {showAdminFields ? null : (
+            <div className="sm:col-span-2">
+              <label htmlFor="visibility" className={labelClass}>
+                可见性
+                <HelpTip text="公开应用会展示在应用广场；私有应用仅自己与管理员可见，图标与截图也需要登录后访问。" />
+              </label>
+              <select
+                id="visibility"
+                value={form.visibility}
+                onChange={(event) =>
+                  update("visibility", event.target.value as FormState["visibility"])
+                }
+                className={inputClass}
+              >
+                <option value="PUBLIC">公开（展示在应用广场）</option>
+                <option value="PRIVATE">私有（仅自己与管理员可见）</option>
+              </select>
+            </div>
+          )}
         </div>
       </section>
 
@@ -378,71 +397,61 @@ export function AppForm({
         )}
       </section>
 
-      <section className="surface p-5">
-        <div className="mb-4 flex items-center gap-2">
-          <h2 className="text-sm font-semibold">展示设置</h2>
-          {showAdminFields ? null : <span className="chip">由管理员控制</span>}
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <label htmlFor="visibility" className={labelClass}>
-              可见性
-              <HelpTip text="私有应用不会出现在公开应用墙，图标与截图也需要管理员登录才能访问。" />
-            </label>
-            <select
-              id="visibility"
-              value={form.visibility}
-              disabled={!showAdminFields}
-              onChange={(event) => update("visibility", event.target.value as FormState["visibility"])}
-              className={inputClass}
-            >
-              <option value="PUBLIC">公开</option>
-              <option value="PRIVATE">私有（仅管理员可见）</option>
-            </select>
-          </div>
+      {showAdminFields ? (
+        <section className="surface p-5">
+          <h2 className="mb-4 text-sm font-semibold">展示设置</h2>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label htmlFor="visibility" className={labelClass}>
+                可见性
+                <HelpTip text="私有应用不会出现在公开应用墙，图标与截图也需要登录才能访问。" />
+              </label>
+              <select
+                id="visibility"
+                value={form.visibility}
+                onChange={(event) => update("visibility", event.target.value as FormState["visibility"])}
+                className={inputClass}
+              >
+                <option value="PUBLIC">公开</option>
+                <option value="PRIVATE">私有（仅管理员与开发者可见）</option>
+              </select>
+            </div>
 
-          <div>
-            <label htmlFor="developerId" className={labelClass}>
-              归属开发者
-              <HelpTip text="指派后该开发者可在开发者门户管理此应用及其版本；留空表示由管理员直接管理。" />
-            </label>
-            <select
-              id="developerId"
-              value={form.developerId}
-              disabled={!showAdminFields}
-              onChange={(event) => update("developerId", event.target.value)}
-              className={inputClass}
-            >
-              {showAdminFields ? (
-                <>
-                  <option value="">未指派（管理员管理）</option>
-                  {developerOptions.map((developer) => (
-                    <option key={developer.id} value={developer.id}>
-                      {developer.displayName
-                        ? `${developer.displayName}（${developer.username}）`
-                        : developer.username}
-                    </option>
-                  ))}
-                </>
-              ) : (
-                <option value="">{developerLabel}</option>
-              )}
-            </select>
-          </div>
+            <div>
+              <label htmlFor="developerId" className={labelClass}>
+                归属开发者
+                <HelpTip text="指派后该开发者可在开发者门户管理此应用及其版本；留空表示由管理员直接管理。" />
+              </label>
+              <select
+                id="developerId"
+                value={form.developerId}
+                onChange={(event) => update("developerId", event.target.value)}
+                className={inputClass}
+              >
+                <option value="">未指派（管理员管理）</option>
+                {developerOptions.map((developer) => (
+                  <option key={developer.id} value={developer.id}>
+                    {developer.displayName
+                      ? `${developer.displayName}（${developer.username}）`
+                      : developer.username}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-          <label className="flex items-center gap-2.5 self-end rounded-xl border border-black/10 px-3.5 py-2.5 text-sm dark:border-white/12">
-            <input
-              type="checkbox"
-              checked={form.pinned}
-              disabled={!showAdminFields}
-              onChange={(event) => update("pinned", event.target.checked)}
-              className="h-4 w-4 rounded border-neutral-300 text-brand focus:ring-brand/30"
-            />
-            置顶展示
-            <HelpTip text="置顶应用会在应用墙与后台列表顶部优先展示。" />
-          </label>
-        </div>
-      </section>
+            <label className="flex items-center gap-2.5 self-end rounded-xl border border-black/10 px-3.5 py-2.5 text-sm">
+              <input
+                type="checkbox"
+                checked={form.pinned}
+                onChange={(event) => update("pinned", event.target.checked)}
+                className="h-4 w-4 rounded border-neutral-300 text-brand focus:ring-brand/30"
+              />
+              置顶展示
+              <HelpTip text="置顶应用会在应用墙与后台列表顶部优先展示。" />
+            </label>
+          </div>
+        </section>
+      ) : null}
 
       {error ? (
         <p role="alert" className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:bg-rose-500/10 dark:text-rose-300">

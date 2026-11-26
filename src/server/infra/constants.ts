@@ -2,7 +2,7 @@
 export const APP_TYPES = ["ANDROID", "WEB"] as const;
 export type AppType = (typeof APP_TYPES)[number];
 
-/** 可见性：公开 / 仅管理员可见 */
+/** 可见性：公开 / 仅管理员与归属开发者可见 */
 export const VISIBILITIES = ["PUBLIC", "PRIVATE"] as const;
 export type Visibility = (typeof VISIBILITIES)[number];
 

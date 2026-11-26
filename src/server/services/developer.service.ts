@@ -209,16 +209,21 @@ export async function listDeveloperApps(developerId: string): Promise<AppCardDto
 }
 
 /**
- * 开发者创建应用，强制写入归属开发者。
+ * 开发者创建应用，强制写入归属开发者，可见性由开发者选择。
  * @param developerId 开发者 ID
- * @param input 应用字段（不含归属与管理员专属字段）
+ * @param input 应用字段（不含归属与置顶）
  * @returns 新建的应用记录
  */
 export async function createDeveloperApp(
   developerId: string,
-  input: Omit<AppInput, "developerId" | "visibility" | "pinned">,
+  input: Omit<AppInput, "developerId" | "pinned">,
 ): Promise<App> {
-  return createApp({ ...input, developerId, visibility: "PUBLIC", pinned: false });
+  return createApp({
+    ...input,
+    developerId,
+    visibility: input.visibility ?? "PUBLIC",
+    pinned: false,
+  });
 }
 
 /**
@@ -232,7 +237,7 @@ export async function createDeveloperApp(
 export async function updateDeveloperApp(
   developerId: string,
   appId: string,
-  input: Partial<Omit<AppInput, "developerId" | "visibility" | "pinned">>,
+  input: Partial<Omit<AppInput, "developerId" | "pinned">>,
 ): Promise<App> {
   await assertDeveloperApp(appId, developerId);
   return updateApp(appId, input);

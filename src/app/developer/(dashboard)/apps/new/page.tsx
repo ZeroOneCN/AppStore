@@ -12,7 +12,7 @@ import { listAdminFacets } from "@/server/services/app.service";
  */
 async function NewDeveloperAppContent() {
   await connection();
-  const session = await requireDeveloperPage("/developer/apps/new");
+  await requireDeveloperPage("/developer/apps/new");
   const facets = await listAdminFacets();
 
   return (
@@ -25,7 +25,7 @@ async function NewDeveloperAppContent() {
       </Link>
       <PageHeader
         title="新建应用"
-        description="先填写基础信息，创建后即可上传 APK；可见性、置顶与归属由管理员控制"
+        description="填写基础信息并选择公开或私有；创建后即可上传 APK，置顶与归属由管理员控制"
       />
 
       <AppForm
@@ -35,7 +35,6 @@ async function NewDeveloperAppContent() {
         categories={facets.categories}
         tagOptions={facets.tags}
         showAdminFields={false}
-        developerLabel={session.username}
       />
     </div>
   );
