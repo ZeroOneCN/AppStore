@@ -64,6 +64,40 @@ export async function saveScreenshot(buffer: Buffer, appId: string): Promise<str
 }
 
 /**
+ * 将临时文件移动到目标路径，必要时覆盖同名文件。
+ * Windows 下目标文件被杀毒或索引服务短暂占用时 rename 会抛 EPERM，因此带重试并退化为覆盖复制。
+ * @param tempPath 临时文件绝对路径
+ * @param destination 目标绝对路径
+ * @returns 无
+ */
+async function replaceFile(tempPath: string, destination: string): Promise<void> {
+  let lastError: unknown = null;
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      await fs.rename(tempPath, destination);
+      return;
+    } catch (error) {
+      lastError = error;
+      // 跨磁盘分区时 rename 会失败，直接退化为复制后删除
+      if ((error as NodeJS.ErrnoException).code === "EXDEV") {
+        await fs.copyFile(tempPath, destination);
+        await fs.rm(tempPath, { force: true });
+        return;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 200 * (attempt + 1)));
+    }
+  }
+
+  try {
+    await fs.copyFile(tempPath, destination);
+    await fs.rm(tempPath, { force: true });
+  } catch {
+    throw lastError;
+  }
+}
+
+/**
  * 将临时 APK 移动到正式目录。
  * @param tempPath 临时文件绝对路径
  * @param appId 应用 ID
@@ -80,17 +114,7 @@ export async function moveApkToFinal(
   await fs.mkdir(dir, { recursive: true });
   const destination = path.join(dir, `${versionCode}.apk`);
 
-  try {
-    await fs.rename(tempPath, destination);
-  } catch (error) {
-    // 跨磁盘分区时 rename 会失败，退化为复制后删除
-    if ((error as NodeJS.ErrnoException).code === "EXDEV") {
-      await fs.copyFile(tempPath, destination);
-      await fs.rm(tempPath, { force: true });
-    } else {
-      throw error;
-    }
-  }
+  await replaceFile(tempPath, destination);
 
   return toStoredPath(destination);
 }

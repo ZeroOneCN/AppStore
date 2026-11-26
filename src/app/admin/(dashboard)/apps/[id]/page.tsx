@@ -19,13 +19,32 @@ import { requireAdminPage } from "@/server/http/guards";
 /** 动态路由参数 */
 type RouteParams = Promise<{ id: string }>;
 
-/** 查询参数：created=1 表示刚由新建页一步创建完成 */
-type RouteSearchParams = Promise<{ created?: string; version?: string }>;
+/** 查询参数：created=1 表示刚由新建页一步创建完成；tab 控制管理分区 */
+type RouteSearchParams = Promise<{ created?: string; version?: string; tab?: string }>;
+
+/** 合法的管理分区 */
+type DetailTab = "versions" | "info" | "assets";
+
+/** 分区标签配置 */
+const TABS: Array<{ key: DetailTab; label: string }> = [
+  { key: "versions", label: "版本发布" },
+  { key: "info", label: "基础信息" },
+  { key: "assets", label: "图标与截图" },
+];
 
 /**
- * 应用详情数据区：组装后台所需数据并渲染各管理模块。
+ * 解析查询参数中的管理分区，非法值回退到版本发布。
+ * @param value 原始 tab 参数
+ * @returns 命中的分区
+ */
+function parseTab(value: string | undefined): DetailTab {
+  return value === "info" || value === "assets" ? value : "versions";
+}
+
+/**
+ * 应用详情数据区：按分区渲染版本发布、基础信息与图标截图。
  * @param props.params 路由参数
- * @param props.searchParams 查询参数，用于展示创建成功提示
+ * @param props.searchParams 查询参数，用于展示创建成功提示与当前分区
  * @returns 管理界面
  */
 async function AdminAppContent({
@@ -38,7 +57,8 @@ async function AdminAppContent({
   await connection();
   await requireAdminPage();
   const { id } = await params;
-  const { created, version } = await searchParams;
+  const { created, version, tab } = await searchParams;
+  const activeTab = parseTab(tab);
 
   let record;
   try {
@@ -89,6 +109,17 @@ async function AdminAppContent({
     createdAt: release.createdAt.toISOString(),
   }));
 
+  const currentRelease = releaseData.find((release) => release.isCurrent) ?? null;
+
+  /**
+   * 生成分区链接：版本发布保持干净地址，其余带 tab 参数。
+   * @param target 目标分区
+   * @returns 分区链接
+   */
+  function tabHref(target: DetailTab): string {
+    return target === "versions" ? `/admin/apps/${app.id}` : `/admin/apps/${app.id}?tab=${target}`;
+  }
+
   return (
     <div className="w-full space-y-6">
       <div>
@@ -115,6 +146,15 @@ async function AdminAppContent({
                     私有
                   </span>
                 ) : null}
+                {currentRelease ? (
+                  <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
+                    线上 v{currentRelease.versionName}
+                  </span>
+                ) : (
+                  <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[11px] text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400">
+                    未发布
+                  </span>
+                )}
               </div>
               <p className="mt-0.5 text-xs text-neutral-400">/apps/{app.slug}</p>
             </div>
@@ -142,76 +182,108 @@ async function AdminAppContent({
             应用已创建{version ? `，首个版本 v${version} 已发布` : ""}
           </p>
           <p className="mt-1 text-xs leading-5 text-emerald-700 dark:text-emerald-400">
-            已进入该应用的管理页：下方可直接上传新版本、维护截图，页面最底部可继续修改基础信息。
+            当前位于「版本发布」：可继续上传新版本；基础信息与图标截图请使用上方标签切换。
           </p>
         </div>
       ) : null}
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
-        <div className="space-y-6">
-          <section id="releases" className="surface p-5">
-            <h2 className="mb-3 text-sm font-semibold">版本管理</h2>
-            <ReleaseManager appId={app.id} appType={app.type} releases={releaseData} />
+      <nav
+        aria-label="应用管理分区"
+        className="flex gap-1 overflow-x-auto rounded-xl border border-neutral-200 bg-neutral-50 p-1 text-sm dark:border-neutral-800 dark:bg-neutral-900"
+      >
+        {TABS.map((item) => {
+          const active = activeTab === item.key;
+          return (
+            <Link
+              key={item.key}
+              href={tabHref(item.key)}
+              aria-current={active ? "page" : undefined}
+              className={`whitespace-nowrap rounded-lg px-4 py-2 transition ${
+                active
+                  ? "bg-white font-medium text-neutral-900 shadow-sm dark:bg-neutral-800 dark:text-neutral-50"
+                  : "text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"
+              }`}
+            >
+              {item.label}
+            </Link>
+          );
+        })}
+      </nav>
+
+      {activeTab === "versions" ? (
+        <section className="surface p-5">
+          <ReleaseManager
+            appId={app.id}
+            appType={app.type}
+            releases={releaseData}
+            defaultPublish
+          />
+        </section>
+      ) : null}
+
+      {activeTab === "info" ? (
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
+          <section className="min-w-0">
+            <AppForm
+              mode="edit"
+              app={app}
+              categories={facets.categories}
+              tagOptions={facets.tags}
+              developerOptions={developers.map((developer) => ({
+                id: developer.id,
+                username: developer.username,
+                displayName: developer.displayName,
+              }))}
+            />
           </section>
 
-          <section className="surface p-5">
+          <aside className="space-y-6">
+            <section className="surface p-5 text-xs text-neutral-500 dark:text-neutral-400">
+              <h2 className="mb-3 text-sm font-semibold text-neutral-900 dark:text-neutral-50">记录信息</h2>
+              <dl className="space-y-2">
+                <div className="flex justify-between gap-3">
+                  <dt>应用 ID</dt>
+                  <dd className="truncate font-mono text-[11px]">{app.id}</dd>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <dt>创建时间</dt>
+                  <dd>{formatDateTime(record.createdAt.toISOString())}</dd>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <dt>最近更新</dt>
+                  <dd>{formatDateTime(record.updatedAt.toISOString())}</dd>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <dt>下载次数</dt>
+                  <dd>{record.downloadCount}</dd>
+                </div>
+              </dl>
+            </section>
+
+            <section className="rounded-2xl border border-rose-200 bg-white p-5 dark:border-rose-500/30 dark:bg-neutral-900">
+              <h2 className="mb-2 text-sm font-semibold text-rose-600 dark:text-rose-300">危险操作</h2>
+              <p className="mb-3 text-xs text-neutral-500 dark:text-neutral-400">
+                删除后应用、版本记录与磁盘文件将一并清除。
+              </p>
+              <DeleteAppButton appId={app.id} appName={app.name} />
+            </section>
+          </aside>
+        </div>
+      ) : null}
+
+      {activeTab === "assets" ? (
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
+          <section className="surface min-w-0 p-5">
             <h2 className="mb-3 text-sm font-semibold">截图管理</h2>
             <ScreenshotManager appId={app.id} screenshots={app.screenshots} />
           </section>
-        </div>
 
-        <aside className="space-y-6">
-          <section className="surface p-5">
+          <aside className="surface h-fit p-5">
             <h2 className="mb-3 text-sm font-semibold">应用图标</h2>
             <IconUploader appId={app.id} iconUrl={app.iconUrl} />
-          </section>
-
-          <section className="surface p-5 text-xs text-neutral-500 dark:text-neutral-400">
-            <h2 className="mb-3 text-sm font-semibold text-neutral-900 dark:text-neutral-50">记录信息</h2>
-            <dl className="space-y-2">
-              <div className="flex justify-between gap-3">
-                <dt>应用 ID</dt>
-                <dd className="truncate font-mono text-[11px]">{app.id}</dd>
-              </div>
-              <div className="flex justify-between gap-3">
-                <dt>创建时间</dt>
-                <dd>{formatDateTime(record.createdAt.toISOString())}</dd>
-              </div>
-              <div className="flex justify-between gap-3">
-                <dt>最近更新</dt>
-                <dd>{formatDateTime(record.updatedAt.toISOString())}</dd>
-              </div>
-              <div className="flex justify-between gap-3">
-                <dt>下载次数</dt>
-                <dd>{record.downloadCount}</dd>
-              </div>
-            </dl>
-          </section>
-
-          <section className="rounded-2xl border border-rose-200 bg-white p-5 dark:border-rose-500/30 dark:bg-neutral-900">
-            <h2 className="mb-2 text-sm font-semibold text-rose-600 dark:text-rose-300">危险操作</h2>
-            <p className="mb-3 text-xs text-neutral-500 dark:text-neutral-400">
-              删除后应用、版本记录与磁盘文件将一并清除。
-            </p>
-            <DeleteAppButton appId={app.id} appName={app.name} />
-          </section>
-        </aside>
-      </div>
-
-      <section>
-        <h2 className="mb-3 text-sm font-semibold text-neutral-500 dark:text-neutral-400">基础信息</h2>
-        <AppForm
-          mode="edit"
-          app={app}
-          categories={facets.categories}
-          tagOptions={facets.tags}
-          developerOptions={developers.map((developer) => ({
-            id: developer.id,
-            username: developer.username,
-            displayName: developer.displayName,
-          }))}
-        />
-      </section>
+          </aside>
+        </div>
+      ) : null}
     </div>
   );
 }

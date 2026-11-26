@@ -17,13 +17,32 @@ import { listAllReleases } from "@/server/services/release.service";
 /** 动态路由参数 */
 type RouteParams = Promise<{ id: string }>;
 
-/** 查询参数：created=1 表示刚由新建页一步创建完成 */
-type RouteSearchParams = Promise<{ created?: string; version?: string }>;
+/** 查询参数：created=1 表示刚由新建页一步创建完成；tab 控制管理分区 */
+type RouteSearchParams = Promise<{ created?: string; version?: string; tab?: string }>;
+
+/** 合法的管理分区 */
+type DetailTab = "versions" | "info" | "assets";
+
+/** 分区标签配置 */
+const TABS: Array<{ key: DetailTab; label: string }> = [
+  { key: "versions", label: "版本发布" },
+  { key: "info", label: "基础信息" },
+  { key: "assets", label: "图标与截图" },
+];
+
+/**
+ * 解析查询参数中的管理分区，非法值回退到版本发布。
+ * @param value 原始 tab 参数
+ * @returns 命中的分区
+ */
+function parseTab(value: string | undefined): DetailTab {
+  return value === "info" || value === "assets" ? value : "versions";
+}
 
 /**
  * 开发者应用详情数据区：仅允许访问归属自己的应用。
  * @param props.params 路由参数
- * @param props.searchParams 查询参数，用于展示创建成功提示
+ * @param props.searchParams 查询参数，用于展示创建成功提示与当前分区
  * @returns 管理界面
  */
 async function DeveloperAppContent({
@@ -35,7 +54,8 @@ async function DeveloperAppContent({
 }) {
   await connection();
   const { id } = await params;
-  const { created, version } = await searchParams;
+  const { created, version, tab } = await searchParams;
+  const activeTab = parseTab(tab);
   const session = await requireDeveloperPage();
 
   let record;
@@ -84,6 +104,17 @@ async function DeveloperAppContent({
     createdAt: release.createdAt.toISOString(),
   }));
 
+  const currentRelease = releaseData.find((release) => release.isCurrent) ?? null;
+
+  /**
+   * 生成分区链接：版本发布保持干净地址，其余带 tab 参数。
+   * @param target 目标分区
+   * @returns 分区链接
+   */
+  function tabHref(target: DetailTab): string {
+    return target === "versions" ? `/developer/apps/${app.id}` : `/developer/apps/${app.id}?tab=${target}`;
+  }
+
   return (
     <div className="w-full space-y-6">
       <div>
@@ -98,7 +129,18 @@ async function DeveloperAppContent({
           <div className="flex min-w-0 items-start gap-3">
             <AppIcon name={app.name} iconUrl={app.iconUrl} size={56} />
             <div className="min-w-0">
-              <h1 className="truncate text-2xl font-semibold tracking-tight">{app.name}</h1>
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="truncate text-2xl font-semibold tracking-tight">{app.name}</h1>
+                {currentRelease ? (
+                  <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
+                    线上 v{currentRelease.versionName}
+                  </span>
+                ) : (
+                  <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[11px] text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400">
+                    未发布
+                  </span>
+                )}
+              </div>
               <p className="mt-0.5 text-xs text-neutral-400">/apps/{app.slug}</p>
             </div>
           </div>
@@ -125,67 +167,94 @@ async function DeveloperAppContent({
             应用已创建{version ? `，首个版本 v${version} 已发布` : ""}
           </p>
           <p className="mt-1 text-xs leading-5 text-emerald-700 dark:text-emerald-400">
-            已进入该应用的管理页：下方可直接上传新版本、维护截图，页面最底部可继续修改基础信息。
+            当前位于「版本发布」：可继续上传新版本；基础信息与图标截图请使用上方标签切换。
           </p>
         </div>
       ) : null}
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
-        <div className="space-y-6">
-          <section id="releases" className="surface p-5">
-            <h2 className="mb-3 text-sm font-semibold">版本管理</h2>
-            <ReleaseManager
-              appId={app.id}
-              appType={app.type}
-              releases={releaseData}
-              apiBase="/api/dev"
-              autoPublish
-              showDownload
+      <nav
+        aria-label="应用管理分区"
+        className="flex gap-1 overflow-x-auto rounded-xl border border-neutral-200 bg-neutral-50 p-1 text-sm dark:border-neutral-800 dark:bg-neutral-900"
+      >
+        {TABS.map((item) => {
+          const active = activeTab === item.key;
+          return (
+            <Link
+              key={item.key}
+              href={tabHref(item.key)}
+              aria-current={active ? "page" : undefined}
+              className={`whitespace-nowrap rounded-lg px-4 py-2 transition ${
+                active
+                  ? "bg-white font-medium text-neutral-900 shadow-sm dark:bg-neutral-800 dark:text-neutral-50"
+                  : "text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"
+              }`}
+            >
+              {item.label}
+            </Link>
+          );
+        })}
+      </nav>
+
+      {activeTab === "versions" ? (
+        <section className="surface p-5">
+          <ReleaseManager
+            appId={app.id}
+            appType={app.type}
+            releases={releaseData}
+            apiBase="/api/dev"
+            defaultPublish
+            showDownload
+          />
+        </section>
+      ) : null}
+
+      {activeTab === "info" ? (
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
+          <section className="min-w-0">
+            <AppForm
+              mode="edit"
+              app={app}
+              apiBase="/api/dev/apps"
+              afterCreateBase="/developer/apps"
+              showAdminFields={false}
             />
           </section>
 
-          <section className="surface p-5">
+          <aside className="h-fit space-y-6">
+            <section className="surface p-5 text-xs text-neutral-500 dark:text-neutral-400">
+              <h2 className="mb-3 text-sm font-semibold text-neutral-900 dark:text-neutral-50">记录信息</h2>
+              <dl className="space-y-2">
+                <div className="flex justify-between gap-3">
+                  <dt>应用 ID</dt>
+                  <dd className="truncate font-mono text-[11px]">{app.id}</dd>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <dt>下载次数</dt>
+                  <dd>{record.downloadCount}</dd>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <dt>版本数量</dt>
+                  <dd>{releaseData.length}</dd>
+                </div>
+              </dl>
+            </section>
+          </aside>
+        </div>
+      ) : null}
+
+      {activeTab === "assets" ? (
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
+          <section className="surface min-w-0 p-5">
             <h2 className="mb-3 text-sm font-semibold">截图管理</h2>
             <ScreenshotManager appId={app.id} screenshots={app.screenshots} apiBase="/api/dev" />
           </section>
-        </div>
 
-        <aside className="space-y-6">
-          <section className="surface p-5">
+          <aside className="surface h-fit p-5">
             <h2 className="mb-3 text-sm font-semibold">应用图标</h2>
             <IconUploader appId={app.id} iconUrl={app.iconUrl} apiBase="/api/dev" />
-          </section>
-
-          <section className="surface p-5 text-xs text-neutral-500 dark:text-neutral-400">
-            <h2 className="mb-3 text-sm font-semibold text-neutral-900 dark:text-neutral-50">记录信息</h2>
-            <dl className="space-y-2">
-              <div className="flex justify-between gap-3">
-                <dt>应用 ID</dt>
-                <dd className="truncate font-mono text-[11px]">{app.id}</dd>
-              </div>
-              <div className="flex justify-between gap-3">
-                <dt>下载次数</dt>
-                <dd>{record.downloadCount}</dd>
-              </div>
-              <div className="flex justify-between gap-3">
-                <dt>版本数量</dt>
-                <dd>{releaseData.length}</dd>
-              </div>
-            </dl>
-          </section>
-        </aside>
-      </div>
-
-      <section>
-        <h2 className="mb-3 text-sm font-semibold text-neutral-500 dark:text-neutral-400">基础信息</h2>
-        <AppForm
-          mode="edit"
-          app={app}
-          apiBase="/api/dev/apps"
-          afterCreateBase="/developer/apps"
-          showAdminFields={false}
-        />
-      </section>
+          </aside>
+        </div>
+      ) : null}
     </div>
   );
 }

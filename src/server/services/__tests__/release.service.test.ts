@@ -7,6 +7,7 @@ import {
   createDraft,
   evaluateUpdate,
   listDownloadableReleases,
+  overwriteRelease,
   publish,
   setCurrent,
 } from "../release.service";
@@ -78,9 +79,67 @@ describe("版本服务", () => {
     expect(downloadable.map((item) => item.status)).toEqual(["PUBLISHED", "ARCHIVED"]);
   });
 
-  it("重复版本号返回 VERSION_CONFLICT", async () => {    const app = await seedApp();
+  it("重复版本号返回 VERSION_CONFLICT", async () => {
+    const app = await seedApp();
     await draft(app, 2);
     await expect(draft(app, 2)).rejects.toMatchObject({ code: "VERSION_CONFLICT" });
+  });
+
+  it("覆盖同版本号保留版本 ID、发布时间与下载统计，并更新包信息", async () => {
+    const app = await seedApp();
+    const original = await draft(app, 3, { uploadedBy: "admin", changelog: "旧日志" });
+    await publish(original.id);
+    await prisma.release.update({ where: { id: original.id }, data: { downloadCount: 12 } });
+    const publishedAt = (
+      await prisma.release.findUniqueOrThrow({ where: { id: original.id } })
+    ).publishedAt;
+
+    const updated = await overwriteRelease({
+      releaseId: original.id,
+      versionName: "1.0.4",
+      filePath: `apks/${app.id}/3.apk`,
+      fileSize: 4096,
+      sha256: "sha-new",
+      signFingerprint: "CC:DD",
+      minSdk: 26,
+      changelog: "",
+      uploadedBy: "dev:alice",
+      publish: true,
+    });
+
+    expect(updated.id).toBe(original.id);
+    expect(updated.versionName).toBe("1.0.4");
+    expect(updated.fileSize).toBe(4096);
+    expect(updated.sha256).toBe("sha-new");
+    expect(updated.status).toBe("PUBLISHED");
+    expect(updated.isCurrent).toBe(true);
+    expect(updated.downloadCount).toBe(12);
+    expect(updated.uploadedBy).toBe("dev:alice");
+    expect(updated.changelog).toBe("旧日志");
+    expect(updated.publishedAt?.getTime()).toBe(publishedAt?.getTime());
+  });
+
+  it("已归档版本覆盖后不能直接发布", async () => {
+    const app = await seedApp();
+    const release = await draft(app, 4);
+    await archive(release.id);
+
+    await expect(
+      overwriteRelease({
+        releaseId: release.id,
+        versionName: "1.0.4",
+        filePath: `apks/${app.id}/4.apk`,
+        fileSize: 1024,
+        sha256: "sha-4b",
+        signFingerprint: null,
+        minSdk: null,
+        publish: true,
+      }),
+    ).rejects.toMatchObject({ code: "VALIDATION_FAILED" });
+
+    const stored = await prisma.release.findUniqueOrThrow({ where: { id: release.id } });
+    expect(stored.status).toBe("ARCHIVED");
+    expect(stored.sha256).toBe("sha-4");
   });
 
   it("发布新版本会取消旧版本的当前标记", async () => {

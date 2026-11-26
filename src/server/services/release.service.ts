@@ -23,6 +23,24 @@ export interface CreateDraftInput {
   minSupportedVersionCode?: number | null;
 }
 
+/** 覆盖既有版本的输入 */
+export interface OverwriteReleaseInput {
+  /** 待覆盖版本 ID */
+  releaseId: string;
+  versionName: string;
+  /** 以存储根目录为基准的相对路径 */
+  filePath: string;
+  fileSize: number;
+  sha256: string;
+  signFingerprint: string | null;
+  minSdk: number | null;
+  changelog?: string;
+  /** 上传者标记：admin 或 dev:<username> */
+  uploadedBy?: string | null;
+  /** 覆盖后是否立即发布为当前版本 */
+  publish: boolean;
+}
+
 /** 更新检查结果 */
 export interface UpdateCheckResult {
   hasUpdate: boolean;
@@ -84,6 +102,58 @@ export async function createDraft(input: CreateDraftInput): Promise<Release> {
       status: "DRAFT",
       isCurrent: false,
     },
+  });
+}
+
+/**
+ * 覆盖同版本号版本：替换安装包与包信息，可选择立即发布。
+ * 保留版本 ID、下载次数与首次发布时间；已归档版本不允许直接发布。
+ * @param input 覆盖字段与是否发布
+ * @returns 覆盖后的版本记录
+ * @throws AppError 版本不存在、已归档却要求发布时抛出
+ */
+export async function overwriteRelease(input: OverwriteReleaseInput): Promise<Release> {
+  return prisma.$transaction(async (tx) => {
+    const release = await tx.release.findUnique({ where: { id: input.releaseId } });
+    if (!release) throw new AppError("NOT_FOUND", "版本不存在");
+    if (release.status === "ARCHIVED" && input.publish) {
+      throw new AppError(
+        "VALIDATION_FAILED",
+        "该版本已归档，覆盖后不能直接发布，请取消「上传后立即发布」后重试",
+      );
+    }
+
+    if (input.publish) {
+      await tx.release.updateMany({
+        where: { appId: release.appId, isCurrent: true },
+        data: { isCurrent: false },
+      });
+    }
+
+    const updated = await tx.release.update({
+      where: { id: release.id },
+      data: {
+        versionName: input.versionName,
+        filePath: input.filePath,
+        fileSize: input.fileSize,
+        sha256: input.sha256,
+        signFingerprint: input.signFingerprint,
+        minSdk: input.minSdk,
+        // 未填写更新日志时保留原日志，避免覆盖操作清空说明
+        changelog: input.changelog?.trim() ? input.changelog.trim() : release.changelog,
+        uploadedBy: input.uploadedBy ?? release.uploadedBy,
+        ...(input.publish
+          ? {
+              status: "PUBLISHED",
+              isCurrent: true,
+              publishedAt: release.publishedAt ?? new Date(),
+            }
+          : {}),
+      },
+    });
+
+    await tx.app.update({ where: { id: release.appId }, data: { updatedAt: new Date() } });
+    return updated;
   });
 }
 
@@ -195,9 +265,11 @@ export async function deleteRelease(id: string): Promise<{ appId: string; versio
 export async function assertVersionAvailable(appId: string, versionCode: number): Promise<void> {
   const existing = await prisma.release.findFirst({ where: { appId, versionCode } });
   if (existing) {
-    throw new AppError("VERSION_CONFLICT", `版本号 ${versionCode} 已存在`, {
-      releaseId: existing.id,
-    });
+    throw new AppError(
+      "VERSION_CONFLICT",
+      `版本号 ${versionCode} 已存在，如需替换请勾选「覆盖同版本号」`,
+      { releaseId: existing.id },
+    );
   }
 }
 

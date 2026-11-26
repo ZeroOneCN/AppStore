@@ -18,10 +18,11 @@ function decodeHeaderValue(value: string | null): string {
 }
 
 /**
- * 开发者上传 APK：解析成功后直接发布为当前版本。
+ * 开发者上传 APK：解析成功后默认直接发布为当前版本。
+ * 查询参数 publish=0 可仅创建草稿；overwrite=1 表示同版本号强制覆盖。
  * @param request HTTP 请求，二进制请求体
  * @param context 路由参数，id 为应用 ID
- * @returns 已发布版本与解析结果
+ * @returns 版本记录与解析结果
  */
 export async function POST(
   request: Request,
@@ -35,19 +36,27 @@ export async function POST(
       throw new AppError("VALIDATION_FAILED", "请求体为空，请以二进制流上传 APK");
     }
 
+    const url = new URL(request.url);
+    const overwrite = url.searchParams.get("overwrite") === "1";
+    const publishParam = url.searchParams.get("publish");
+    const autoPublish = publishParam === null ? true : publishParam === "1";
+
     const result = await uploadApkRelease({
       app,
       actor: `dev:${session.username}`,
       body: request.body,
       changelog: decodeHeaderValue(request.headers.get("x-version-changelog")),
-      autoPublish: true,
+      overwrite,
+      autoPublish,
     });
 
     await logAudit(
       `dev:${session.username}`,
       "dev.release.upload",
       `${app.name} v${result.release.versionName}`,
-      `${(result.release.fileSize / 1024 / 1024).toFixed(1)} MB，版本号 ${result.release.versionCode}，已自动发布`,
+      `${(result.release.fileSize / 1024 / 1024).toFixed(1)} MB，版本号 ${result.release.versionCode}，${
+        result.overwritten ? "覆盖同版本号，" : ""
+      }${autoPublish ? "已发布" : result.overwritten ? "保留原发布状态" : "草稿"}`,
     );
 
     return Response.json(result, { status: 201, headers: { "Cache-Control": "no-store" } });
