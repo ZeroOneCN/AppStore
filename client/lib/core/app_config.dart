@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// 全局配置：应用商店服务端基地址，支持编译期默认值与运行时修改。
+/// 全局配置：应用仓库服务端基地址，支持编译期默认值与运行时修改。
 class AppConfig extends ChangeNotifier {
   AppConfig._();
 
@@ -14,8 +14,15 @@ class AppConfig extends ChangeNotifier {
   /// 编译期默认地址，可通过 `--dart-define=APPSTORE_BASE_URL=...` 覆盖。
   static const String _compileTimeBaseUrl = String.fromEnvironment(
     'APPSTORE_BASE_URL',
-    defaultValue: 'http://10.0.2.2:3000',
+    defaultValue: 'https://apps.01iot.top',
   );
+
+  /// 旧版本内置的本地调试地址；升级后若本地仍保存这些地址，自动改用新的云服务地址。
+  static const Set<String> _legacyDefaults = {
+    'http://10.0.2.2:3000',
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+  };
 
   String _baseUrl = _compileTimeBaseUrl;
   bool _loaded = false;
@@ -34,7 +41,13 @@ class AppConfig extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       final saved = prefs.getString(_prefsKey);
       if (saved != null && saved.trim().isNotEmpty) {
-        _baseUrl = _normalize(saved);
+        final normalized = _normalize(saved);
+        if (_legacyDefaults.contains(normalized)) {
+          // 旧版本保存的模拟器/本机地址已失效，写回新的默认云服务地址
+          await prefs.setString(_prefsKey, _compileTimeBaseUrl);
+        } else {
+          _baseUrl = normalized;
+        }
       }
     } catch (_) {
       // 本地存储不可用时使用编译期默认地址

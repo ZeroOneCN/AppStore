@@ -200,7 +200,7 @@ class AppStoreApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: '应用商店',
+      title: '应用仓库',
       debugShowCheckedModeBanner: false,
       theme: _buildTheme(Brightness.light),
       darkTheme: _buildTheme(Brightness.dark),

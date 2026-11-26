@@ -68,7 +68,7 @@ class _HomeShellState extends State<HomeShell> {
       builder: (dialogContext) => PopScope(
         canPop: !force,
         child: AlertDialog(
-          title: Text(force ? '应用商店需要更新' : '发现商店新版本'),
+          title: Text(force ? '应用仓库需要更新' : '发现应用仓库新版本'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -106,7 +106,7 @@ class _HomeShellState extends State<HomeShell> {
     await Navigator.of(context).push(
       MaterialPageRoute<bool>(
         builder: (_) => DownloadInstallPage(
-          appName: '应用商店',
+          appName: '应用仓库',
           fileKey: '$packageName-${latest.versionCode}',
           loadRelease: () async {
             // 重新检查以获取最新的签名下载地址

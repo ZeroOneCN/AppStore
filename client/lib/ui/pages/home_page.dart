@@ -113,7 +113,7 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       appBar: AppBar(
         title: const Row(
-          children: [BrandMark(size: 26), SizedBox(width: 10), Text('应用商店')],
+          children: [BrandMark(size: 26), SizedBox(width: 10), Text('应用仓库')],
         ),
         actions: [
           PopupMenuButton<String>(

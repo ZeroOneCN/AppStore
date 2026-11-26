@@ -17,7 +17,7 @@ class BrandMark extends StatelessWidget {
         width: size,
         height: size,
         filterQuality: FilterQuality.high,
-        semanticLabel: '应用商店标志',
+        semanticLabel: '应用仓库标志',
       ),
     );
   }

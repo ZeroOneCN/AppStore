@@ -253,7 +253,7 @@ class _SettingsPageState extends State<SettingsPage> {
           const SizedBox(height: 12),
           _SectionCard(
             title: '关于',
-            subtitle: '个人自建应用商店客户端',
+            subtitle: '应用仓库客户端',
             child: Column(
               children: [
                 const BrandMark(size: 48),

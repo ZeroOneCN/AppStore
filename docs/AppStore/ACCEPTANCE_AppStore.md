@@ -382,3 +382,18 @@ HTTP 冒烟实测明细（种子数据：`smoke-pack`，真实 APK 4026 版，�
 | 开发者后台 | 通过 | `/developer/apps`、`/developer/apps/new`、`/developer/apps/[id]`、`/developer/settings`、`/developer/docs` 同上；版本列表行在窄屏纵向堆叠、操作按钮自动换行 |
 | 骨架屏 | 通过 | `SiteHeaderSkeleton` 同步双行高度，会话读取期间无布局跳动 |
 | 验证 | 通过 | `npm run typecheck`、`npm run lint`、`npm test`（10 文件 / 58 用例）、`npm run build` 全部通过；构建后以 `npm start` 复测全部页面 |
+
+### 客户端更名与云端更新（B22）
+
+| 项目 | 结果 | 证据 |
+|---|---|---|
+| APP 名称 | 通过 | Android `android:label`、`MaterialApp.title`、首页标题、更新弹窗、更新列表与设置页文案统一为「应用仓库」 |
+| 默认服务地址 | 通过 | `AppConfig` 编译期默认值改为 `https://apps.01iot.top`；升级后若本地仍保存 `10.0.2.2`/`localhost`/`127.0.0.1` 等旧调试地址，自动切换到云端地址 |
+| 版本 | 通过 | `pubspec.yaml` 升至 `1.0.3+4`；`aapt dump badging` 实测 `package=com.appstore.appstore_client`、`versionCode=4`、`versionName=1.0.3`、`application-label=应用仓库` |
+| 构建与单测 | 通过 | `flutter analyze` 0 issue；`flutter test` 5/5；`flutter build apk --release` 成功（51.8 MB），SHA-256 `f01bb151…2edb` |
+| 真机安装 | 通过 | `adb install -r` 覆盖安装成功；清空应用数据后启动，首页标题显示「应用仓库」，并从云端加载到 1 个应用（当前云端尚未发布版本，卡片显示「未发布」） |
+| 本地完整链路 | 通过 | 本地上传 54,286,957 字节 APK 返回 201（versionCode 4、SHA-256 与本地一致），发布后 `/api/update/check?versionCode=3` 返回 `hasUpdate=true` 且 `latest.versionCode=4` |
+| 云端只读与鉴权 | 通过 | 云端 37 项冒烟全过：4 个公开页面 200、公开列表/更新检查/OpenAPI/robots/sitemap/manifest、CSP/HSTS/X-Frame-Options 等安全头、未登录 401、跨站写请求 403、管理员登录与 6 个后台页面 200、站点设置读取 |
+| 大文件上传缺陷 | 已修复 | 复现：云端上传 54MB APK 返回 422「end of central directory record signature not found」。根因：`proxy.ts` 对所有路径生效，Next 代理默认仅保留前 10MB 请求体。修复：`proxyClientMaxBodySize: "64mb"` 并将 APK 上传路由从代理匹配器排除（保持流式落盘）；本地复测同一 APK 上传返回 201 |
+| CSRF 回归 | 通过 | 排除上传路由后，其余写接口跨站 Origin 仍返回 403（本地实测 `/api/auth/login`） |
+| 云端待办 | 未完成 | 云端当前部署仍是旧构建，54MB APK 仍会被截断；需在服务器执行 `git pull && npm run build && npm start`（或既有部署流程）后，用管理员接口发布 1.0.3 并复测远程更新 |

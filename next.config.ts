@@ -6,6 +6,10 @@ const nextConfig: NextConfig = {
   partialPrefetching: true,
   // 隐藏框架版本，减少指纹信息
   poweredByHeader: false,
+  experimental: {
+    // 多图上传等请求体上限；APK 上传路由已在 proxy 匹配器中排除，直接流式落盘
+    proxyClientMaxBodySize: "64mb",
+  },
   /**
    * 全站安全响应头：限制内联资源以外的外部加载，并禁止被嵌入。
    * @returns 统一响应头规则

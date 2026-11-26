@@ -71,7 +71,7 @@ class _UpdatesPageState extends State<UpdatesPage> {
         if (ownCheck.hasUpdate) {
           items.add(
             UpdateItem(
-              appName: '应用商店',
+              appName: '应用仓库',
               packageName: info.packageName,
               installedVersionCode: ownCode,
               check: ownCheck,

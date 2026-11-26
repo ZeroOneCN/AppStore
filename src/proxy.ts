@@ -49,7 +49,9 @@ export function proxy(request: NextRequest): NextResponse {
   return NextResponse.next();
 }
 
-/** 跳过静态资源，其余路径统一校验 */
+/** 跳过静态资源与 APK 上传路由：上传路由直接流式落盘，避免代理缓冲大请求体 */
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|logo.svg).*)"],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|logo.svg|api/admin/apps/[^/]+/releases|api/dev/apps/[^/]+/releases).*)",
+  ],
 };
