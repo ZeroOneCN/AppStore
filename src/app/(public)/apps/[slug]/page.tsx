@@ -8,14 +8,34 @@ import { DownloadButton } from "@/components/download-button";
 import { ScreenshotGallery } from "@/components/screenshot-gallery";
 import { VersionHistory } from "@/components/version-history";
 import { formatBytes, formatDateTime } from "@/lib/format";
-import { isAppError } from "@/server/infra/errors";
+import { AppError, isAppError } from "@/server/infra/errors";
+import { getSession } from "@/server/http/session";
 import { getAppBySlug, type AppDetailDto } from "@/server/services/app.service";
 
 /** 动态路由参数 */
 type RouteParams = Promise<{ slug: string }>;
 
-/** 同一请求内复用应用详情查询 */
-const loadApp = cache(async (slug: string): Promise<AppDetailDto> => getAppBySlug(slug));
+/**
+ * 同一请求内复用应用详情查询。
+ * 私有应用仅上传者（归属开发者）与管理员可查看，其他访客按不存在处理。
+ * @param slug 应用访问标识
+ * @returns 应用详情
+ */
+const loadApp = cache(async (slug: string): Promise<AppDetailDto> => {
+  const session = await getSession();
+  const app = await getAppBySlug(slug, session !== null);
+
+  if (app.visibility === "PRIVATE") {
+    const allowed =
+      session?.role === "admin" ||
+      (session?.role === "developer" && app.developer?.id === session.sub);
+    if (!allowed) {
+      throw new AppError("NOT_FOUND", "应用不存在或未公开");
+    }
+  }
+
+  return app;
+});
 
 /**
  * 详情页元数据：应用不存在时直接返回 404，避免流式渲染出现软 404。
@@ -92,6 +112,9 @@ async function AppDetailContent({ params }: { params: RouteParams }) {
             </h1>
             {app.pinned ? <span className="chip">置顶</span> : null}
             <span className="chip">{app.type === "ANDROID" ? "Android" : "网页作品"}</span>
+            {app.visibility === "PRIVATE" ? (
+              <span className="chip">私有 · 仅上传者与管理员可见</span>
+            ) : null}
           </div>
 
           <p className="mt-2 text-sm leading-6 text-neutral-600 dark:text-neutral-300">{app.summary}</p>

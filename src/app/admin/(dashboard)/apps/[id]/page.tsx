@@ -160,16 +160,14 @@ async function AdminAppContent({
             </div>
           </div>
 
-          {app.visibility === "PUBLIC" ? (
-            <Link
-              href={`/apps/${app.slug}`}
-              target="_blank"
-              rel="noreferrer"
-              className="rounded-xl border border-neutral-200 px-3 py-2 text-sm transition hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800"
-            >
-              查看前台页面
-            </Link>
-          ) : null}
+          <Link
+            href={`/apps/${app.slug}`}
+            target="_blank"
+            rel="noreferrer"
+            className="rounded-xl border border-neutral-200 px-3 py-2 text-sm transition hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800"
+          >
+            {app.visibility === "PUBLIC" ? "查看前台页面" : "预览私有页面"}
+          </Link>
         </div>
       </div>
 
@@ -217,7 +215,7 @@ async function AdminAppContent({
             appType={app.type}
             releases={releaseData}
             appIconUrl={app.iconUrl}
-            appUrl={app.visibility === "PUBLIC" ? `/apps/${app.slug}` : null}
+            appUrl={`/apps/${app.slug}`}
           />
         </section>
       ) : null}

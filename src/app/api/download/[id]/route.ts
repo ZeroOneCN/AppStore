@@ -76,7 +76,8 @@ export async function GET(
     verifyDownloadSignature(id, url.searchParams.get("exp"), url.searchParams.get("sig"));
 
     const release = await getReleaseWithApp(id);
-    if (release.status === "DRAFT" || release.app.visibility !== "PUBLIC") {
+    // 私有应用不进入前台列表，但持有签名下载链接的调用方仍可下载以完成更新
+    if (release.status === "DRAFT") {
       throw new AppError("NOT_FOUND", "版本不存在或未公开");
     }
 

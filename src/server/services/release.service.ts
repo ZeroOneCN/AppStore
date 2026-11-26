@@ -349,7 +349,8 @@ export async function evaluateUpdate(
   origin?: string,
 ): Promise<UpdateCheckResult> {
   const app = await prisma.app.findFirst({
-    where: { packageName, type: "ANDROID", visibility: "PUBLIC" },
+    // 私有应用同样参与更新检查（不进入前台列表），便于上传者自行分发更新
+    where: { packageName, type: "ANDROID" },
   });
   if (!app) {
     return { hasUpdate: false, forceUpdate: false, reason: "NOT_FOUND", latest: null };

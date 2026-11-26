@@ -298,23 +298,23 @@ export function AppCreateWizard({
             </p>
             <p className="mt-1 text-sm leading-6 text-emerald-800 dark:text-emerald-300">
               {success.published
-                ? `${name} 的 ${versionLabel} 已发布为当前版本，前台可立即查看与下载。`
+                ? visibility === "PUBLIC"
+                  ? `${name} 的 ${versionLabel} 已发布为当前版本，前台可立即查看与下载。`
+                  : `${name} 的 ${versionLabel} 已发布为当前版本；应用为私有，仅你与管理员可查看与下载。`
                 : `${name} 已创建，可进入管理页上传版本或调整内容。`}
             </p>
           </div>
         </div>
 
         <div className="mt-4 flex flex-wrap gap-2">
-          {visibility === "PUBLIC" ? (
-            <Link
-              href={`/apps/${success.slug}`}
-              target="_blank"
-              rel="noreferrer"
-              className={`${primaryButtonClass} px-4 py-2`}
-            >
-              查看已发布的应用页面
-            </Link>
-          ) : null}
+          <Link
+            href={`/apps/${success.slug}`}
+            target="_blank"
+            rel="noreferrer"
+            className={`${primaryButtonClass} px-4 py-2`}
+          >
+            {visibility === "PUBLIC" ? "查看已发布的应用页面" : "预览私有应用页面"}
+          </Link>
           <Link href={managementHref} className={secondaryButtonClass}>
             进入应用管理
           </Link>

@@ -182,6 +182,17 @@ describe("版本服务", () => {
     expect(result.latest).toBeNull();
   });
 
+  it("私有应用仍可检查到更新（不进入前台列表）", async () => {
+    const app = await seedApp();
+    await prisma.app.update({ where: { id: app.id }, data: { visibility: "PRIVATE" } });
+    const release = await draft(app, 6);
+    await publish(release.id);
+
+    const result = await evaluateUpdate(PACKAGE_NAME, 5);
+    expect(result.hasUpdate).toBe(true);
+    expect(result.latest?.versionCode).toBe(6);
+  });
+
   it("低于最低支持版本时强制更新", async () => {
     const app = await seedApp();
     const release = await draft(app, 10, { minSupportedVersionCode: 8 });
