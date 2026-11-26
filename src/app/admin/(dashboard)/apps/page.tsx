@@ -199,7 +199,8 @@ async function AppsContent({ searchParams }: { searchParams: AdminAppsSearchPara
                       ) : null}
                     </div>
                     <p className="mt-0.5 truncate text-xs text-neutral-400">/{app.slug}</p>
-                    <p className="mt-1 line-clamp-2 text-xs text-neutral-500 dark:text-neutral-400">
+                    {/* 固定预留两行简介高度，保证不同卡片下方的标签与底栏对齐 */}
+                    <p className="mt-1 line-clamp-2 min-h-[32px] text-xs text-neutral-500 dark:text-neutral-400">
                       {app.summary}
                     </p>
                   </div>
