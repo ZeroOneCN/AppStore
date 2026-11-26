@@ -49,9 +49,9 @@ export function proxy(request: NextRequest): NextResponse {
   return NextResponse.next();
 }
 
-/** 跳过静态资源与 APK 上传路由：上传路由直接流式落盘，避免代理缓冲大请求体 */
+/** 跳过静态资源与大文件上传路由：上传路由直接流式落盘，避免代理缓冲请求体（路由内自行校验 Origin） */
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|logo.svg|api/admin/apps/[^/]+/releases|api/dev/apps/[^/]+/releases).*)",
+    "/((?!_next/static|_next/image|favicon.ico|logo.svg|api/admin/apps/[^/]+/releases|api/dev/apps/[^/]+/releases|api/admin/apps/with-apk|api/dev/apps/with-apk).*)",
   ],
 };

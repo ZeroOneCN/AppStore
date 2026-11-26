@@ -1,5 +1,6 @@
 import { readAppWithApkForm, parseFormTags } from "@/server/http/app-upload-form";
 import { devAppCreateSchema } from "@/server/http/dev-app-schema";
+import { assertSameOrigin } from "@/server/http/origin";
 import { requireDeveloper } from "@/server/http/session";
 import { AppError, toErrorResponse } from "@/server/infra/errors";
 import { logAudit } from "@/server/services/audit.service";
@@ -14,6 +15,7 @@ import { createDeveloperApp } from "@/server/services/developer.service";
  */
 export async function POST(request: Request): Promise<Response> {
   try {
+    assertSameOrigin(request);
     const session = await requireDeveloper();
     const { values, apk } = await readAppWithApkForm(request);
     const tags = parseFormTags(values.tags);

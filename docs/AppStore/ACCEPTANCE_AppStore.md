@@ -463,3 +463,15 @@ HTTP 冒烟实测明细（种子数据：`smoke-pack`，真实 APK 4026 版，�
 | 实测 | 通过 | 管理员 multipart 上传 1.0.5 APK 返回 201，自动解析包名 `com.appstore.appstore_client`、版本 1.0.5(6)、`iconSaved=true` 并发布为当前版本；测试应用删除后存储目录同步清理，原应用包名已恢复 |
 | 界面验证 | 通过 | 手机端 390px 新建页无横向溢出，安装包选择、提示与包名回退输入正常展示 |
 | 质量 | 通过 | `typecheck`、`lint`、`test`、`build` 全部通过 |
+
+### 上传报错修复与进度条（B28）
+
+| 项目 | 结果 | 证据 |
+|---|---|---|
+| 问题定位 | 通过 | `with-apk` 路由未加入 `src/proxy.ts` 匹配器排除列表，代理接管请求后 `request.formData()` 解析失败，统一返回 `VALIDATION_FAILED / 请使用表单方式提交应用信息与安装包` |
+| 代理修复 | 通过 | 匹配器排除 `api/admin/apps/with-apk` 与 `api/dev/apps/with-apk`，请求体直接流式进入路由，避免代理缓冲 50MB+ 上传 |
+| 安全补位 | 通过 | 新增 `src/server/http/origin.ts` 的 `assertSameOrigin`，两个被排除的上传路由在入口自行校验 Origin；实测伪造 `Origin: https://evil.example` 返回 403 `跨站请求已被拒绝` |
+| 上传进度 | 通过 | 因 fetch 无法获取上传进度，表单改为 `XMLHttpRequest` 提交并监听 `upload.onprogress`，实时展示百分比进度条；上传完成（100%）时提示「上传完成，正在解析并创建应用…」，失败或结束自动隐藏 |
+| 实测 | 通过 | 浏览器同源 multipart 上传 51.9MB APK 返回 201，自动解析 `com.appstore.appstore_client`、版本 1.0.5(6) 并发布；测试应用删除后存储目录与图标同步清理 |
+| 质量 | 通过 | `typecheck`、`lint`（0 warning）、`test`（62/62）、`build` 全部通过 |
+| 部署 | 说明 | 网页端重新构建部署后生效，无数据库变更 |

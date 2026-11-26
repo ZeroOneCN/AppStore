@@ -1,5 +1,6 @@
 import { appCreateSchema } from "@/server/http/app-schema";
 import { readAppWithApkForm, parseFormTags } from "@/server/http/app-upload-form";
+import { assertSameOrigin } from "@/server/http/origin";
 import { requireAdmin } from "@/server/http/session";
 import { AppError, toErrorResponse } from "@/server/infra/errors";
 import { createApp } from "@/server/services/app.service";
@@ -14,6 +15,7 @@ import { createAppWithApk } from "@/server/services/create-with-apk.service";
  */
 export async function POST(request: Request): Promise<Response> {
   try {
+    assertSameOrigin(request);
     const session = await requireAdmin();
     const { values, apk } = await readAppWithApkForm(request);
     const tags = parseFormTags(values.tags);

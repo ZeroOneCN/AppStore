@@ -24,6 +24,41 @@ interface FormState {
 }
 
 /**
+ * 以 XMLHttpRequest 提交 multipart 表单，并实时回调上传进度。
+ * fetch 目前无法获取上传进度，故使用 XHR 的 upload.onprogress。
+ * @param url 接口地址
+ * @param data 表单数据
+ * @param onProgress 上传进度回调，参数为 0-100 的整数
+ * @returns 是否成功与已解析的响应数据
+ */
+function postFormWithProgress(
+  url: string,
+  data: FormData,
+  onProgress: (percent: number) => void,
+): Promise<{ ok: boolean; data: unknown }> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", url);
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) {
+        onProgress(Math.round((event.loaded / event.total) * 100));
+      }
+    };
+    xhr.onload = () => {
+      let parsed: unknown = null;
+      try {
+        parsed = xhr.responseText ? JSON.parse(xhr.responseText) : null;
+      } catch {
+        parsed = null;
+      }
+      resolve({ ok: xhr.status >= 200 && xhr.status < 300, data: parsed });
+    };
+    xhr.onerror = () => reject(new Error("network"));
+    xhr.send(data);
+  });
+}
+
+/**
  * 应用新建 / 编辑表单。
  * @param props.mode 表单模式
  * @param props.app 编辑模式下的初始数据
@@ -77,6 +112,8 @@ export function AppForm({
   // 新建时可直接选择 APK，一次提交创建应用并上传首个版本
   const [apkFile, setApkFile] = useState<File | null>(null);
   const [apkNote, setApkNote] = useState("");
+  // 安装包上传进度（0-100），null 表示未在上传
+  const [apkProgress, setApkProgress] = useState<number | null>(null);
 
   /**
    * 更新单个表单字段。
@@ -159,7 +196,7 @@ export function AppForm({
     payload.visibility = form.visibility;
 
     try {
-      let response: Response;
+      let result: { ok: boolean; data: unknown };
       if (mode === "create" && apkFile && form.type === "ANDROID") {
         const data = new FormData();
         data.append("slug", String(payload.slug));
@@ -175,23 +212,27 @@ export function AppForm({
           data.append("developerId", form.developerId);
         }
         data.append("apk", apkFile);
-        response = await fetch(`${apiBase}/with-apk`, { method: "POST", body: data });
+        setApkProgress(0);
+        result = await postFormWithProgress(`${apiBase}/with-apk`, data, setApkProgress);
       } else {
-        response = await fetch(mode === "create" ? apiBase : `${apiBase}/${app?.id}`, {
+        const response = await fetch(mode === "create" ? apiBase : `${apiBase}/${app?.id}`, {
           method: mode === "create" ? "POST" : "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
+        result = { ok: response.ok, data: await response.json().catch(() => null) };
       }
-      const data: unknown = await response.json().catch(() => null);
 
-      if (!response.ok) {
-        setError(errorMessageOf(data, "保存失败，请检查填写内容"));
+      if (!result.ok) {
+        setError(errorMessageOf(result.data, "保存失败，请检查填写内容"));
         return;
       }
 
       if (mode === "create") {
-        const id = data && typeof data === "object" && "id" in data ? String(data.id) : "";
+        const id =
+          result.data && typeof result.data === "object" && "id" in result.data
+            ? String(result.data.id)
+            : "";
         router.push(id ? `${afterCreateBase}/${id}` : afterCreateBase);
         return;
       }
@@ -201,6 +242,7 @@ export function AppForm({
     } catch {
       setError("网络异常，请检查连接后重试");
     } finally {
+      setApkProgress(null);
       setSaving(false);
     }
   }
@@ -558,6 +600,23 @@ export function AppForm({
           </span>
         ) : null}
       </div>
+
+      {apkProgress !== null ? (
+        <div className="space-y-1.5" role="status" aria-live="polite">
+          <div className="flex items-center justify-between gap-3 text-xs text-neutral-500 dark:text-neutral-400">
+            <span>
+              {apkProgress >= 100 ? "上传完成，正在解析并创建应用…" : "正在上传安装包…"}
+            </span>
+            <span className="tabular-nums">{apkProgress}%</span>
+          </div>
+          <div className="h-2 overflow-hidden rounded-full bg-neutral-100 dark:bg-neutral-800">
+            <div
+              className="h-full rounded-full bg-brand transition-[width] duration-300 ease-out"
+              style={{ width: `${Math.max(apkProgress, 4)}%` }}
+            />
+          </div>
+        </div>
+      ) : null}
     </form>
   );
 }
