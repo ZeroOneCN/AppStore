@@ -25,7 +25,7 @@ async function NewDeveloperAppContent() {
       </Link>
       <PageHeader
         title="新建应用"
-        description="填写基础信息并选择公开或私有；创建后即可上传 APK，置顶与归属由管理员控制"
+        description="填写基础信息，可直接选择 APK 一步完成创建与首个版本发布；置顶与归属由管理员控制"
       />
 
       <AppForm

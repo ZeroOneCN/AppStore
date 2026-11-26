@@ -26,7 +26,7 @@ async function NewAppContent() {
       </Link>
       <PageHeader
         title="新建应用"
-        description="先填写基础信息，创建后即可上传 APK、图标与截图"
+        description="先填写基础信息，可直接选择 APK 一步完成创建与首个版本发布"
       />
       <AppForm
         mode="create"
