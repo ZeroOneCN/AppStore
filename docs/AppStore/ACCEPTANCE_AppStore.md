@@ -256,4 +256,7 @@ HTTP 冒烟实测明细（种子数据：`smoke-pack`，真实 APK 4026 版，�
 | 图形规范 | 通过 | 按 brand-icon-system 令牌生成：256×256 画布、圆角 56（22%）、白底 146° 渐变（`#FFFFFF → #F3F8FD → #E9F1FA`）、1px `#DCE5F1` 描边、图形占 92% |
 | 图形 | 通过 | 使用 `store` 预设（应用商店图形），渐变 `#64C1F7 → #2E93E4 → #1A6DBC`，等比居中不裁切 |
 | 落地 | 通过 | 更新 `public/logo.svg` 与 `src/app/icon.svg`；页头、登录页、错误页、PWA 清单共用新图标 |
+| 客户端同步 | 通过 | 用同一 SVG 生成 `client/assets/brand/logo.png` 与 5 档 `mipmap/ic_launcher.png`；`pubspec.yaml` 版本升至 `1.0.1+2` |
+| 真机安装 | 通过 | `flutter build apk --release`（51.8 MB）后 `adb install -r` 成功，设备版本 1.0.1 (2)，首页顶部已显示新品牌图 |
+| 商店发布 | 通过 | 客户端 1.0.1 (2) 已上传并发布，应用图标替换为新品牌图（25,917 字节） |
 | 验证 | 通过 | `/logo.svg`、`/icon.svg` 均返回 200 且包含新渐变；`npm run build` 通过 |
