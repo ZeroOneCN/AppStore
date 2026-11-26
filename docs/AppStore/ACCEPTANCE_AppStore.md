@@ -401,3 +401,17 @@ HTTP 冒烟实测明细（种子数据：`smoke-pack`，真实 APK 4026 版，�
 | 云端更新接口 | 通过 | `versionCode=3` 返回 `hasUpdate=true`、`latest.versionCode=4`、`downloadUrl` 指向 `https://apps.01iot.top/api/download/...`；`versionCode=4` 返回 `hasUpdate=false` |
 | 下载校验 | 通过 | 按签名地址下载 54,286,957 字节，SHA-256 `34a8429a9e66c8645494a183bfb98cb10c5504bc5a4d52c613E7C1DAD505F74A` 与包内一致 |
 | 真机远程更新 | 通过 | 真机卸载后安装 1.0.2(3)（测试包指向云端），启动弹出「发现应用仓库新版本 v1.0.3 (4)」；点击更新后从云端下载 51.8 MB，进度 99%→完成，调起 MIUI 安装器（提示 ICP 备案，选择继续安装）后版本变为 `versionCode=4 / versionName=1.0.3` |
+
+### 开发者注册与邀请码（B23）
+
+| 项目 | 结果 | 证据 |
+|---|---|---|
+| 配置来源 | 通过 | 新增 `SiteSetting.registrationMode`（OFF/OPEN/INVITE）与 `InviteCode` 表，迁移 `add_registration_invite_codes`；注册模式只读取数据库，不依赖任何环境变量，后台保存后立即生效（单测「注册模式以数据库后台设置为准」覆盖） |
+| 注册模式 | 通过 | `/admin/registration` 提供关闭注册 / 开放注册 / 邀请码注册三档；`PUT /api/admin/registration` 仅管理员可调用，写入审计日志 `settings.registration` |
+| 邀请码管理 | 通过 | `GET/POST /api/admin/invite-codes` 与 `DELETE /api/admin/invite-codes/{id}`：单次生成 1–20 个 `APP-XXXX-XXXX`、可填备注与有效期（0 为长期）、列表展示可用/已使用/已过期、支持复制与删除；生成/删除写入审计日志 |
+| 注册接口 | 通过 | 新增 `POST /api/auth/register`：OFF 返回 403、OPEN 无需邀请码、INVITE 必须有效邀请码；邀请码单次使用（事务内条件更新，并发安全），大小写不敏感；用户名 3–32 位、密码至少 8 位，bcrypt 存储；注册成功自动下发统一会话并进入 `/developer/apps` |
+| 安全 | 通过 | 注册尝试按 IP 限流（15 分钟 10 次）；用户名不可与管理员或其他开发者重复；邀请码失效/过期/已使用统一提示；跨站写请求仍由代理返回 403 |
+| 页面 | 通过 | 新增 `/register`：关闭时展示「暂未开放注册」，开放/邀请码模式展示对应表单；登录页按模式展示「立即注册 / 使用邀请码注册」入口；手机端 390px 无横向溢出 |
+| 手机端回归 | 通过 | 修复登录/注册页 `-inset-x-16` 光晕把布局宽度撑到 438px 的问题（`overflow-hidden` 裁切装饰层后恢复 390px）；注册管理页在 390px 下模式卡片与邀请码表单正常堆叠 |
+| 测试 | 通过 | `npm test` 10 文件 / 62 用例全绿；`typecheck`、`lint`、`build` 通过；HTTP 全链路 22 项 PASS（关闭/开放/邀请码、重复使用、大小写、越权、跨站、页面渲染、恢复关闭） |
+| 部署 | 说明 | 云端升级需执行 `npx prisma migrate deploy` 以创建 `InviteCode` 表与注册模式字段 |

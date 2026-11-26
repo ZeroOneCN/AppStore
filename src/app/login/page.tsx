@@ -36,7 +36,7 @@ async function LoginContent({ searchParams }: { searchParams: SearchParams }) {
   }
 
   const next = readNext(await searchParams);
-  const { siteName } = await getSiteSettings();
+  const { siteName, registrationMode } = await getSiteSettings();
 
   return (
     <div className="relative w-full max-w-[420px]">
@@ -54,6 +54,17 @@ async function LoginContent({ searchParams }: { searchParams: SearchParams }) {
         <div className="card-apple p-6 sm:p-8">
           <h2 className="mb-5 text-center text-base font-semibold tracking-tight">登录账号</h2>
           <LoginForm next={next} />
+          {registrationMode !== "OFF" ? (
+            <p className="mt-5 border-t border-black/[0.06] pt-4 text-center text-xs text-neutral-500 dark:border-white/10 dark:text-neutral-400">
+              还没有开发者账号？
+              <Link
+                href="/register"
+                className="ml-1 font-medium text-brand transition hover:text-brand-deep"
+              >
+                {registrationMode === "INVITE" ? "使用邀请码注册" : "立即注册"}
+              </Link>
+            </p>
+          ) : null}
           <p className="mt-5 text-center text-[11px] leading-5 text-neutral-400">
             连续输错 5 次将锁定 5 分钟
           </p>
@@ -90,7 +101,7 @@ function LoginSkeleton() {
  */
 export default function LoginPage({ searchParams }: { searchParams: SearchParams }) {
   return (
-    <main className="page-center page-shell py-12 text-neutral-900 dark:text-neutral-50">
+    <main className="page-center page-shell overflow-hidden py-12 text-neutral-900 dark:text-neutral-50">
       <Suspense fallback={<LoginSkeleton />}>
         <LoginContent searchParams={searchParams} />
       </Suspense>

@@ -23,6 +23,13 @@ export const SESSION_COOKIE = "appstore_session";
 export const DEVELOPER_STATUSES = ["ACTIVE", "DISABLED"] as const;
 export type DeveloperStatus = (typeof DEVELOPER_STATUSES)[number];
 
+/** 开发者注册模式：关闭 / 开放注册 / 邀请码注册 */
+export const REGISTRATION_MODES = ["OFF", "OPEN", "INVITE"] as const;
+export type RegistrationMode = (typeof REGISTRATION_MODES)[number];
+
+/** 注册尝试限流：单 IP 每 15 分钟最多尝试次数 */
+export const REGISTER_RATE_LIMIT = { maxAttempts: 10, windowMs: 15 * 60 * 1000 } as const;
+
 /** 图标统一尺寸（像素） */
 export const ICON_SIZE = 512;
 

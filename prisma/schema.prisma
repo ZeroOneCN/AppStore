@@ -122,6 +122,28 @@ model SiteSetting {
   maxApkMb  Int      @default(200)
   /// 站点兜底根地址（无请求上下文时使用）
   baseUrl   String   @default("")
+  /// 开发者注册模式：OFF 关闭 | OPEN 开放注册 | INVITE 邀请码注册
+  registrationMode String @default("OFF")
   updatedAt DateTime @updatedAt
+}
+
+/// 注册邀请码，单次使用，可设置有效期与备注
+model InviteCode {
+  id        String    @id @default(cuid())
+  code      String    @unique
+  /// 备注，便于区分批次或用途
+  note      String    @default("")
+  /// 创建者管理员用户名
+  createdBy String    @default("")
+  /// 过期时间，为空表示长期有效
+  expiresAt DateTime?
+  /// 使用时间，为空表示未使用
+  usedAt    DateTime?
+  /// 使用者用户名
+  usedBy    String?
+  createdAt DateTime  @default(now())
+
+  @@index([createdAt])
+  @@index([usedAt])
 }
 
