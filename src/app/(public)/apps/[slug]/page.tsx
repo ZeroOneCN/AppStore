@@ -69,6 +69,36 @@ function InfoRow({ label, children }: { label: string; children: React.ReactNode
 }
 
 /**
+ * 内容分区容器：统一标题字号、品牌色标题条与间距，保证页面排版节奏一致。
+ * @param props.title 分区标题
+ * @param props.hint 标题右侧的辅助说明
+ * @param props.children 分区内容
+ * @returns 分区卡片
+ */
+function Section({
+  title,
+  hint,
+  children,
+}: {
+  title: string;
+  hint?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="surface p-5 sm:p-6">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="flex items-center gap-2 text-[15px] font-semibold tracking-tight">
+          <span aria-hidden className="h-4 w-1 rounded-full bg-brand" />
+          {title}
+        </h2>
+        {hint ? <span className="shrink-0 text-[11px] text-neutral-400">{hint}</span> : null}
+      </div>
+      <div className="mt-4">{children}</div>
+    </section>
+  );
+}
+
+/**
  * 详情页数据区：加载应用详情并渲染主体内容。
  * @param props.params 路由参数
  * @returns 详情内容
@@ -102,12 +132,12 @@ async function AppDetailContent({ params }: { params: RouteParams }) {
       </nav>
 
       {/* 应用头部：图标、名称、简介与主操作 */}
-      <header className="surface mt-4 flex flex-col gap-5 p-6 sm:flex-row sm:items-center sm:p-8">
+      <header className="surface mt-4 flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:p-8">
         <AppIcon name={app.name} iconUrl={app.iconUrl} size={92} />
 
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="max-w-full truncate text-[26px] font-semibold tracking-tight sm:text-[32px]">
+            <h1 className="max-w-full break-words text-[26px] font-semibold leading-tight tracking-tight sm:text-[32px]">
               {app.name}
             </h1>
             {app.pinned ? <span className="chip">置顶</span> : null}
@@ -120,7 +150,7 @@ async function AppDetailContent({ params }: { params: RouteParams }) {
           <p className="mt-2 text-sm leading-6 text-neutral-600 dark:text-neutral-300">{app.summary}</p>
 
           {/* 开发者信息前置展示；未指派开发者时标记为平台官方 */}
-          <div className="mt-3 flex items-center gap-2">
+          <div className="mt-3 flex flex-wrap items-center gap-2">
             <span
               aria-hidden
               className="grid size-6 shrink-0 place-items-center rounded-full bg-brand/10 text-[11px] font-semibold text-brand dark:bg-brand/20"
@@ -180,49 +210,44 @@ async function AppDetailContent({ params }: { params: RouteParams }) {
 
       <div className="mt-6 grid flex-1 gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="min-w-0 space-y-5">
-          <section className="surface p-6">
-            <h2 className="text-sm font-semibold">应用介绍</h2>
-            <p className="mt-3 max-w-3xl whitespace-pre-line break-words text-sm leading-7 text-neutral-700 dark:text-neutral-300">
+          <Section title="应用介绍">
+            <p className="max-w-3xl whitespace-pre-line break-words text-sm leading-7 text-neutral-700 dark:text-neutral-300">
               {app.description || "暂无详细介绍。"}
             </p>
-          </section>
+          </Section>
 
           {app.screenshots.length > 0 ? (
-            <section className="surface p-6">
-              <h2 className="text-sm font-semibold">截图</h2>
-              <div className="mt-4">
-                <ScreenshotGallery images={app.screenshots} name={app.name} />
-              </div>
-            </section>
+            <Section title="截图" hint={`${app.screenshots.length} 张`}>
+              <ScreenshotGallery images={app.screenshots} name={app.name} />
+            </Section>
           ) : null}
 
           {release?.changelog ? (
-            <section className="surface p-6">
-              <h2 className="text-sm font-semibold">更新日志 · v{release.versionName}</h2>
-              <p className="mt-3 whitespace-pre-line text-sm leading-7 text-neutral-700 dark:text-neutral-300">
+            <Section title={`更新日志 · v${release.versionName}`}>
+              <p className="whitespace-pre-line break-words text-sm leading-7 text-neutral-700 dark:text-neutral-300">
                 {release.changelog}
               </p>
-            </section>
+            </Section>
           ) : null}
 
           {app.type === "ANDROID" && app.releases.length > 0 ? (
-            <section className="surface p-6">
-              <h2 className="text-sm font-semibold">历史版本</h2>
-              <p className="mt-1 text-[11px] text-neutral-400">点击任意版本查看更新日志、截图与包信息</p>
-              <VersionHistory
-                slug={app.slug}
-                versions={app.releases}
-                currentVersionCode={release?.versionCode}
-                screenshots={app.screenshots}
-              />
-            </section>
+            <Section title="历史版本" hint={`${app.releases.length} 个版本`}>
+              <p className="text-[11px] text-neutral-400">点击任意版本查看更新日志、截图与包信息</p>
+              <div className="mt-3">
+                <VersionHistory
+                  slug={app.slug}
+                  versions={app.releases}
+                  currentVersionCode={release?.versionCode}
+                  screenshots={app.screenshots}
+                />
+              </div>
+            </Section>
           ) : null}
         </div>
 
-        <aside className="lg:sticky lg:top-24 lg:self-start">
-          <div className="surface p-6">
-            <h2 className="text-sm font-semibold">应用信息</h2>
-            <div className="mt-2">
+        <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
+          <Section title="应用信息">
+            <div>
               {app.packageName ? <InfoRow label="包名">{app.packageName}</InfoRow> : null}
               {release ? <InfoRow label="大小">{formatBytes(release.fileSize)}</InfoRow> : null}
               {release?.minSdk ? <InfoRow label="最低系统">Android API {release.minSdk}</InfoRow> : null}
@@ -268,17 +293,16 @@ async function AppDetailContent({ params }: { params: RouteParams }) {
             >
               在客户端接入更新检查 →
             </Link>
-          </div>
+          </Section>
 
-          <div className="surface mt-4 p-6">
-            <h2 className="text-sm font-semibold">加入分发</h2>
-            <p className="mt-2 text-xs leading-6 text-neutral-500 dark:text-neutral-400">
+          <Section title="加入分发">
+            <p className="text-xs leading-6 text-neutral-500 dark:text-neutral-400">
               开发者账号由管理员创建，登录后可上传 APK、管理版本与查看下载数据。
             </p>
             <Link href="/login" className="btn-secondary mt-4 w-full">
               开发者登录
             </Link>
-          </div>
+          </Section>
         </aside>
       </div>
     </div>
