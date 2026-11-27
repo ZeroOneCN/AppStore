@@ -264,7 +264,7 @@ async function HomeContent() {
           </div>
 
           <div className="relative min-w-0">
-            <div className="surface p-5 sm:p-6" style={{ boxShadow: "var(--shadow-float)" }}>
+            <div className="surface p-4 sm:p-5" style={{ boxShadow: "var(--shadow-float)" }}>
               <div className="flex items-center gap-1.5 border-b border-black/[0.06] pb-3 dark:border-white/10">
                 <span className="size-2.5 rounded-full bg-[#ff5f57]" />
                 <span className="size-2.5 rounded-full bg-[#febc2e]" />
@@ -285,12 +285,15 @@ async function HomeContent() {
               </p>
 
               <div className="mt-3">
-                <CodeTabs tabs={integrationSnippets} />
+                <CodeTabs tabs={integrationSnippets} compact />
               </div>
 
-              <div className="hidden sm:block">
-                <p className="mt-4 text-[11px] text-neutral-400">返回示例</p>
-                <pre className="code-block mt-1.5 text-[11px]">{`{
+              <details className="group mt-3 hidden sm:block">
+                <summary className="flex cursor-pointer list-none items-center gap-1.5 text-[11px] text-neutral-400 transition hover:text-neutral-600 dark:hover:text-neutral-200">
+                  <span className="transition group-open:rotate-90">›</span>
+                  展开返回示例
+                </summary>
+                <pre className="code-block mt-2 text-[11px]">{`{
   "hasUpdate": true,
   "forceUpdate": false,
   "latest": {
@@ -299,8 +302,8 @@ async function HomeContent() {
     "downloadUrl": "/api/download/xxx?exp=...&sig=..."
   }
 }`}</pre>
-              </div>
-              <div className="mt-4 flex items-center justify-between gap-3 text-[11px] text-neutral-500 dark:text-neutral-400">
+              </details>
+              <div className="mt-3 flex items-center justify-between gap-3 text-[11px] text-neutral-500 dark:text-neutral-400">
                 <span className="hidden sm:inline">下载链接 10 分钟有效</span>
                 <div className="flex items-center gap-3">
                   {tryUrl ? (

@@ -12,9 +12,10 @@ export type CodeTab = {
 /**
  * 多语言代码块：顶部语言切换与一键复制。
  * @param props.tabs 语言与代码内容
+ * @param props.compact 紧凑模式，减少内边距与字号，用于首页等空间有限的位置
  * @returns 代码块组件
  */
-export function CodeTabs({ tabs }: { tabs: CodeTab[] }) {
+export function CodeTabs({ tabs, compact = false }: { tabs: CodeTab[]; compact?: boolean }) {
   const [activeId, setActiveId] = useState(tabs[0]?.id ?? "");
   const [copied, setCopied] = useState(false);
 
@@ -64,7 +65,11 @@ export function CodeTabs({ tabs }: { tabs: CodeTab[] }) {
           {copied ? "已复制" : "复制"}
         </button>
       </div>
-      <pre className="overflow-x-auto px-4 py-4 font-mono text-[12.5px] leading-6 text-neutral-100">
+      <pre
+        className={`overflow-x-auto font-mono text-neutral-100 ${
+          compact ? "px-3 py-2.5 text-[11.5px] leading-5" : "px-4 py-4 text-[12.5px] leading-6"
+        }`}
+      >
         <code>{active.code}</code>
       </pre>
     </div>
