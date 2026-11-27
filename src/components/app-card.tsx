@@ -73,10 +73,39 @@ export function AppCard({ app }: { app: AppCardDto }) {
               </span>
             ) : null}
           </div>
-          {/* 固定预留开发者一行高度，未指派开发者时展示平台官方，保持卡片对齐 */}
-          <p className="mt-0.5 min-h-[16px] truncate text-[11px] font-medium text-brand">
-            开发者 {app.developer ? app.developer.displayName || app.developer.username : "平台官方"}
-          </p>
+          {/* 作者信息：头像 + 名称，官方应用使用盾牌标识，保持一行占位以对齐卡片 */}
+          <div className="mt-1 flex min-h-[18px] items-center gap-1.5 text-[11px]">
+            {app.developer ? (
+              <>
+                <span
+                  aria-hidden
+                  className="grid size-4 shrink-0 place-items-center rounded-full bg-neutral-100 text-[9px] font-semibold text-neutral-600 dark:bg-white/10 dark:text-neutral-300"
+                >
+                  {(app.developer.displayName || app.developer.username).trim().charAt(0).toUpperCase()}
+                </span>
+                <span className="truncate text-neutral-500 dark:text-neutral-400">
+                  {app.developer.displayName || app.developer.username}
+                </span>
+              </>
+            ) : (
+              <>
+                <svg
+                  viewBox="0 0 24 24"
+                  className="size-3.5 shrink-0 text-brand"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={1.8}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden
+                >
+                  <path d="M12 3 4 6v6c0 5 3.5 7.5 8 9 4.5-1.5 8-4 8-9V6l-8-3Z" />
+                  <path d="m9 12 2 2 4-4" />
+                </svg>
+                <span className="truncate text-brand">平台官方</span>
+              </>
+            )}
+          </div>
           {/* 固定预留两行简介高度，保证不同卡片下方的标签与底栏对齐 */}
           <p className="mt-1 line-clamp-2 min-h-[40px] text-[13px] leading-5 text-neutral-500 dark:text-neutral-400">
             {app.summary}

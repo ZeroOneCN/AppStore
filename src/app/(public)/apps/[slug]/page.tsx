@@ -149,22 +149,37 @@ async function AppDetailContent({ params }: { params: RouteParams }) {
 
           <p className="mt-2 text-sm leading-6 text-neutral-600 dark:text-neutral-300">{app.summary}</p>
 
-          {/* 开发者信息前置展示；未指派开发者时标记为平台官方 */}
+          {/* 开发者信息：头像/官方盾牌 + 名称，去掉 @用户名 与角色徽标，避免信息重复 */}
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <span
-              aria-hidden
-              className="grid size-6 shrink-0 place-items-center rounded-full bg-brand/10 text-[11px] font-semibold text-brand dark:bg-brand/20"
-            >
-              {(app.developer?.displayName || app.developer?.username || "官").trim().charAt(0).toUpperCase()}
-            </span>
-            <span className="text-[13px] font-medium text-neutral-800 dark:text-neutral-100">
+            <span className="sr-only">开发者：</span>
+            {app.developer ? (
+              <span
+                aria-hidden
+                className="grid size-6 shrink-0 place-items-center rounded-full bg-neutral-100 text-[11px] font-semibold text-neutral-600 dark:bg-white/10 dark:text-neutral-300"
+              >
+                {(app.developer.displayName || app.developer.username).trim().charAt(0).toUpperCase()}
+              </span>
+            ) : (
+              <span
+                aria-hidden
+                className="grid size-6 shrink-0 place-items-center rounded-full bg-brand/10 text-brand dark:bg-brand/20"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  className="size-3.5"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={1.8}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M12 3 4 6v6c0 5 3.5 7.5 8 9 4.5-1.5 8-4 8-9V6l-8-3Z" />
+                  <path d="m9 12 2 2 4-4" />
+                </svg>
+              </span>
+            )}
+            <span className="text-[13px] font-medium text-neutral-700 dark:text-neutral-200">
               {app.developer?.displayName || app.developer?.username || "平台官方"}
-            </span>
-            {app.developer?.displayName ? (
-              <span className="text-xs text-neutral-400">@{app.developer.username}</span>
-            ) : null}
-            <span className="rounded-full bg-brand/10 px-2 py-0.5 text-[11px] font-medium text-brand dark:bg-brand/20">
-              {app.developer ? "开发者" : "官方"}
             </span>
           </div>
 
@@ -256,18 +271,9 @@ async function AppDetailContent({ params }: { params: RouteParams }) {
               ) : null}
               {app.type === "WEB" ? <InfoRow label="类型">网页作品</InfoRow> : null}
               <InfoRow label="开发者">
-                {app.developer ? (
-                  <span>
-                    {app.developer.displayName || app.developer.username}
-                    {app.developer.displayName ? (
-                      <span className="ml-1.5 text-[11px] font-normal text-neutral-400">
-                        @{app.developer.username}
-                      </span>
-                    ) : null}
-                  </span>
-                ) : (
-                  <span>平台官方</span>
-                )}
+                {app.developer
+                  ? app.developer.displayName || app.developer.username
+                  : "平台官方"}
               </InfoRow>
               <InfoRow label="下载次数">{app.downloadCount}</InfoRow>
             </div>
