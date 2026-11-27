@@ -89,6 +89,7 @@
 | B42 | 构建修复：`build` 前自动执行 `prisma generate`（prebuild），解决执行 `migrate deploy` 后未重新生成 Prisma 客户端导致的 `analyticsEvent` 类型缺失与构建失败 | 已完成 |
 | B43 | 安装上报文档补全：公开文档新增字段规范表、调用时机与去重规则，项目接入文档补充 Kotlin/Flutter 示例；开发者后台内嵌文档与 OpenAPI 描述同步 | 已完成 |
 | B44 | 稳定性与发布效率：上报接口按 IP 限流、新增 `/api/health` 健康检查、统计事件清理脚本、版本一键回滚；Flutter 客户端在确认安装成功后自动上报安装/更新统计 | 已完成 |
+| B45 | 接口文档与 JSON 美化：浏览器访问 JSON 接口自动渲染带语法高亮的视图（程序调用不受影响，`?format=json` 强制原始）；补全健康检查、上报字段与限流说明 | 已完成 |
 
 ## 四、约定
 
@@ -110,6 +111,7 @@ npm start
 ### 运行维护
 
 - **健康检查**：`GET /api/health` 返回数据库与存储目录状态，正常为 200，异常为 503，可接入监控探活
+- **接口调试**：浏览器直接打开 JSON 接口会渲染美化视图，程序调用仍返回原始 JSON；追加 `?format=json` 可强制原始响应
 - **统计清理**：`npm run analytics:prune` 默认删除 180 天前的事件，可通过 `ANALYTICS_RETENTION_DAYS` 调整，建议每天凌晨执行一次：
 
 ```bash

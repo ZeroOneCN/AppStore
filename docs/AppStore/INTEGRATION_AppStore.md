@@ -176,6 +176,8 @@ Future<String> downloadApk(Map<String, dynamic> latest) async {
 
 成功返回 `{"ok":true}`；参数缺失或非法返回 400；包名不存在返回 404。同一设备同一版本 5 分钟内重复上报会自动去重。
 
+频率限制：同一 IP 每分钟最多 30 次安装上报，超出返回 429，响应头 `Retry-After` 给出建议等待秒数；客户端上报失败时保留记录、下次启动再试即可。
+
 调用时机：安装或更新完成后的首次启动调用一次，不要每次启动都上报。`installType` 在安装前判断：目标包已存在则为 `update`，否则为 `install`。
 
 ### 4.2 Kotlin 示例

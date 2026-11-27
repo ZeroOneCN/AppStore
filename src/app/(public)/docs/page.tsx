@@ -30,6 +30,14 @@ const ERROR_CODES = [
   { code: "INTERNAL_ERROR", status: "500", desc: "服务器内部错误" },
 ];
 
+/** 接口频率限制 */
+const RATE_LIMITS = [
+  ["GET /api/update/check", "120 次 / 分钟 / IP", "超出返回 429"],
+  ["POST /api/analytics/install", "30 次 / 分钟 / IP", "超出返回 429，Retry-After 给出等待秒数"],
+  ["POST /api/analytics/pageview", "60 次 / 分钟 / IP", "超出返回 429，前台信标自动丢弃"],
+  ["POST /api/auth/login", "连续失败 5 次", "锁定 5 分钟，返回 429"],
+];
+
 /**
  * 生成多语言示例代码。
  * @param base 站点根地址
@@ -296,7 +304,12 @@ async function DocsContent({ embedded = false }: { embedded?: boolean }) {
           <h2 className="text-lg font-semibold">概述</h2>
           <p className="mt-3 text-sm leading-7 text-neutral-600 dark:text-neutral-300">
             站点根地址为 <code className="rounded bg-black/[0.06] px-1.5 py-0.5 font-mono text-[12px] dark:bg-white/10">{base}</code>，
-            所有接口均为 HTTPS GET，响应体为 JSON。客户端只需在启动或进入首页时调用一次更新检查接口。
+            公开接口以 GET 为主，响应体为 JSON。客户端只需在启动或进入首页时调用一次更新检查接口。
+          </p>
+          <p className="mt-2 text-[13px] leading-6 text-neutral-500 dark:text-neutral-400">
+            调试时可在浏览器直接打开接口地址，页面会自动渲染带语法高亮的美化视图；
+            程序调用仍拿到原始 JSON，追加 <code className="rounded bg-black/[0.06] px-1.5 py-0.5 font-mono text-[12px] dark:bg-white/10">?format=json</code>
+            可强制返回原始内容。
           </p>
           <div className="mt-4 grid gap-2 sm:grid-cols-2">
             <div className="rounded-xl bg-black/[0.03] px-3.5 py-3 dark:bg-white/[0.05]">
@@ -516,6 +529,7 @@ Content-Type: application/json
             <li>· installType 判断：安装前查询目标包是否已存在，存在传 update，否则传 install。</li>
             <li>· 成功返回 {`{"ok":true}`}；包名不存在返回 404，参数缺失或非法返回 400。</li>
             <li>· 同一设备同一版本 5 分钟内重复上报会自动去重，重试不会重复计数。</li>
+            <li>· 单 IP 每分钟最多 30 次上报，超出返回 429，响应头 Retry-After 给出建议等待秒数。</li>
             <li>· 不接入时，后台仍统计 PV、下载和渠道来源，只是缺少首次安装/更新与设备分布。</li>
           </ul>
         </section>
@@ -530,6 +544,7 @@ Content-Type: application/json
               ["GET /api/public/releases/{id}/download-ticket", "获取带时效签名的下载短链"],
               ["POST /api/analytics/install", "安装/更新上报（可选），记录首次安装、设备与渠道"],
               ["POST /api/analytics/pageview", "页面浏览上报，由前台页面自动调用"],
+              ["GET /api/health", "健康检查，返回数据库与存储目录状态（正常 200 / 异常 503）"],
               ["GET /api/openapi", "可视化接口文档；加 ?format=json 获取 OpenAPI 3.1 描述"],
             ].map(([path, desc]) => (
               <div key={path} className="flex flex-col gap-1 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
@@ -537,6 +552,20 @@ Content-Type: application/json
                 <span className="text-neutral-500 dark:text-neutral-400">{desc}</span>
               </div>
             ))}
+          </div>
+
+          <div className="mt-4 rounded-xl bg-black/[0.03] px-4 py-3.5 dark:bg-white/[0.05]">
+            <p className="text-[13px] leading-6 text-neutral-600 dark:text-neutral-300">
+              健康检查可用于部署探活与监控告警，脚本直接判断 HTTP 状态码即可，无需解析响应体：
+            </p>
+            <pre className="code-block mt-2.5 text-[11.5px]">{`GET ${base}/api/health
+
+{
+  "status": "ok",
+  "checks": { "database": true, "storage": true },
+  "uptime": 128,
+  "timestamp": "2026-11-27T14:10:09.000Z"
+}`}</pre>
           </div>
         </section>
 
@@ -562,9 +591,30 @@ Content-Type: application/json
               </tbody>
             </table>
           </div>
+          <h3 className="mt-6 text-sm font-semibold">频率限制</h3>
+          <div className="mt-2 overflow-x-auto">
+            <table className="w-full min-w-[560px] text-left text-[13px]">
+              <thead className="text-neutral-500 dark:text-neutral-400">
+                <tr className="border-b border-black/[0.08] dark:border-white/10">
+                  <th className="py-2 pr-4 font-medium">接口</th>
+                  <th className="py-2 pr-4 font-medium">限制</th>
+                  <th className="py-2 font-medium">超出后</th>
+                </tr>
+              </thead>
+              <tbody className="text-neutral-600 dark:text-neutral-300">
+                {RATE_LIMITS.map(([path, limit, result]) => (
+                  <tr key={path} className="border-b border-black/[0.05] last:border-0 dark:border-white/[0.08]">
+                    <td className="py-2.5 pr-4 font-mono text-[12px]">{path}</td>
+                    <td className="py-2.5 pr-4">{limit}</td>
+                    <td className="py-2.5">{result}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
           <p className="mt-4 text-[13px] leading-6 text-neutral-500 dark:text-neutral-400">
-            更新检查接口单 IP 每分钟最多 120 次请求；登录接口连续失败 5 次将锁定 5 分钟。
-            建议客户端在启动时检查一次，并在应用回到前台时按需重试。
+            限流按 IP 计数，建议客户端在启动时检查一次更新，并在应用回到前台时按需重试；
+            收到 429 时优先读取 Retry-After，没有该响应头则等待 1 分钟后再试。
           </p>
         </section>
 

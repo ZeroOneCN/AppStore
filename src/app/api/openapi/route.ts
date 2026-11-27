@@ -20,11 +20,19 @@ export async function GET(request: Request): Promise<Response> {
     tags: [
       { name: "public", description: "公开接口，无需登录" },
       { name: "update", description: "应用内更新检查" },
+      { name: "analytics", description: "客户端可选上报（页面浏览、安装与更新）" },
+      { name: "ops", description: "运维与健康检查" },
       { name: "admin", description: "管理后台接口，需会话 Cookie" },
     ],
     components: {
       securitySchemes: {
         sessionCookie: { type: "apiKey", in: "cookie", name: "appstore_session" },
+      },
+      headers: {
+        RetryAfter: {
+          description: "建议等待的秒数，客户端应在该时间后重试",
+          schema: { type: "integer" },
+        },
       },
       schemas: {
         AppCard: {
@@ -63,6 +71,21 @@ export async function GET(request: Request): Promise<Response> {
                 message: { type: "string" },
               },
             },
+          },
+        },
+        Health: {
+          type: "object",
+          properties: {
+            status: { type: "string", enum: ["ok", "degraded"] },
+            checks: {
+              type: "object",
+              properties: {
+                database: { type: "boolean", description: "数据库是否可连通" },
+                storage: { type: "boolean", description: "存储目录是否可写" },
+              },
+            },
+            uptime: { type: "integer", description: "进程运行秒数" },
+            timestamp: { type: "string", format: "date-time" },
           },
         },
       },
@@ -180,7 +203,28 @@ export async function GET(request: Request): Promise<Response> {
                 },
               },
             },
-            "429": { description: "请求过于频繁" },
+            "429": {
+              description: "同一 IP 每分钟超过 120 次请求",
+              content: { "application/json": { schema: { $ref: "#/components/schemas/Error" } } },
+            },
+          },
+        },
+      },
+      "/api/health": {
+        get: {
+          tags: ["ops"],
+          summary: "健康检查",
+          description:
+            "检查数据库连通性与存储目录可写权限，正常返回 200，异常返回 503；响应禁用缓存，适合监控与部署探活。",
+          responses: {
+            "200": {
+              description: "服务正常",
+              content: { "application/json": { schema: { $ref: "#/components/schemas/Health" } } },
+            },
+            "503": {
+              description: "服务降级（数据库或存储目录异常）",
+              content: { "application/json": { schema: { $ref: "#/components/schemas/Health" } } },
+            },
           },
         },
       },
@@ -189,7 +233,7 @@ export async function GET(request: Request): Promise<Response> {
           tags: ["analytics"],
           summary: "安装/更新上报（可选）",
           description:
-            "客户端在安装或更新完成后调用，用于统计首次安装、更新、设备与系统分布；未接入时仅统计下载。同一设备同一版本 5 分钟内重复上报会自动去重。",
+            "客户端在安装或更新完成后调用，用于统计首次安装、更新、设备与系统分布；未接入时仅统计下载。同一设备同一版本 5 分钟内重复上报会自动去重。单 IP 每分钟最多 30 次，超出返回 429。",
           requestBody: {
             required: true,
             content: {
@@ -211,8 +255,19 @@ export async function GET(request: Request): Promise<Response> {
           },
           responses: {
             "200": { description: "上报成功：{ ok: true }" },
-            "400": { description: "参数缺失或 installType 非法" },
-            "404": { description: "包名未匹配到应用" },
+            "400": {
+              description: "参数缺失或 installType 非法",
+              content: { "application/json": { schema: { $ref: "#/components/schemas/Error" } } },
+            },
+            "404": {
+              description: "包名未匹配到应用",
+              content: { "application/json": { schema: { $ref: "#/components/schemas/Error" } } },
+            },
+            "429": {
+              description: "同一 IP 每分钟超过 30 次上报",
+              headers: { "Retry-After": { $ref: "#/components/headers/RetryAfter" } },
+              content: { "application/json": { schema: { $ref: "#/components/schemas/Error" } } },
+            },
           },
         },
       },
@@ -220,7 +275,8 @@ export async function GET(request: Request): Promise<Response> {
         post: {
           tags: ["analytics"],
           summary: "页面浏览上报",
-          description: "由前台页面信标自动调用，记录 PV/UV、来源域名与渠道；爬虫 UA 会被忽略。",
+          description:
+            "由前台页面信标自动调用，记录 PV/UV、来源域名与渠道；爬虫 UA 会被忽略。单 IP 每分钟最多 60 次，超出返回 429。",
           requestBody: {
             required: true,
             content: {
@@ -241,6 +297,10 @@ export async function GET(request: Request): Promise<Response> {
           responses: {
             "204": { description: "已记录" },
             "400": { description: "path 缺失" },
+            "429": {
+              description: "同一 IP 每分钟超过 60 次上报",
+              headers: { "Retry-After": { $ref: "#/components/headers/RetryAfter" } },
+            },
           },
         },
       },

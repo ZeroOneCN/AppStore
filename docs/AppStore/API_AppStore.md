@@ -6,6 +6,15 @@
 - 基地址：`BASE_URL`（开发默认 `http://localhost:3000`）
 - 返回格式：除下载接口外均为 JSON，错误结构为 `{ "error": { "code": "...", "message": "..." } }`
 - 缓存：公开列表与详情遵循页面缓存策略；更新检查、下载短链与后台接口均为 `no-store`
+- 浏览调试：浏览器直接打开 JSON 接口会自动渲染带语法高亮的美化视图；程序调用仍返回原始 JSON，追加 `?format=json` 可强制原始内容
+- 频率限制：按 IP 计数，超出统一返回 429；安装上报带 `Retry-After` 响应头
+
+| 接口 | 限制 | 说明 |
+|---|---|---|
+| `GET /api/update/check` | 120 次 / 分钟 / IP | 客户端启动时检查一次即可 |
+| `POST /api/analytics/install` | 30 次 / 分钟 / IP | 超出返回 429 与 `Retry-After` |
+| `POST /api/analytics/pageview` | 60 次 / 分钟 / IP | 前台信标自动调用，超限静默丢弃 |
+| `POST /api/auth/login` | 连续失败 5 次 | 锁定 5 分钟 |
 
 ## 一、公开接口
 
@@ -99,7 +108,43 @@ curl "$BASE_URL/api/public/apps?type=ANDROID&sort=downloads"
 - 只返回「公开 + 已发布」的版本；单 IP 每分钟最多 120 次，超出返回 429
 - 开发者可在门户「接入文档」页查看 Kotlin / Flutter 示例（`/developer/docs`）
 
-## 三、后台接口
+## 三、客户端上报（可选）
+
+### 1. 安装 / 更新上报
+
+`POST /api/analytics/install`，`Content-Type: application/json`
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| `packageName` | string | 是 | 应用包名，必须与后台记录一致 |
+| `versionCode` | integer | 是 | 安装或更新后的版本号 |
+| `installType` | string | 是 | `install` 首次安装，`update` 覆盖更新 |
+| `deviceModel` | string | 否 | 设备型号，如 `Pixel 8` |
+| `osVersion` | string | 否 | 系统版本，如 `Android 15` |
+| `channel` | string | 否 | 分发渠道，与页面 `?from=` 对应 |
+
+```bash
+curl -X POST "$BASE_URL/api/analytics/install" \
+  -H "Content-Type: application/json" \
+  -d '{"packageName":"com.example.app","versionCode":12,"installType":"install","osVersion":"Android 15"}'
+```
+
+成功返回 `{"ok":true}`；参数缺失或非法返回 400；包名未匹配到应用返回 404；同一设备同一版本 5 分钟内重复上报自动去重。安装或更新完成后的首次启动调用一次即可。
+
+### 2. 页面浏览上报
+
+`POST /api/analytics/pageview`，由前台页面信标自动调用，接入方通常无需关心。
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| `path` | string | 是 | 页面路径，如 `/apps` |
+| `appId` | string | 否 | 应用详情页对应的应用 ID |
+| `channel` | string | 否 | 来源渠道 |
+| `referrer` | string | 否 | 来源地址，缺省时读取 Referer 请求头 |
+
+成功返回 204 空响应；爬虫 UA 会被忽略，不产生统计记录。
+
+## 四、后台接口
 
 登录后浏览器自动携带 Cookie；脚本可用 `curl -c cookies.txt` 保存会话。
 
@@ -121,7 +166,7 @@ curl "$BASE_URL/api/public/apps?type=ANDROID&sort=downloads"
 | `PATCH /api/admin/developers/{id}` | `{ "status": "ACTIVE" \\| "DISABLED" }` 启停 |
 | `POST /api/admin/developers/{id}/reset-password` | 重置密码，明文仅在本次响应返回一次 |
 
-## 四、开发者接口
+## 五、开发者接口
 
 管理员与开发者共用统一会话 Cookie（`appstore_session`），角色由令牌载荷区分；开发者接口只能操作归属自己的应用。
 
@@ -151,11 +196,26 @@ curl -b cookies.txt -X POST "$BASE_URL/api/admin/apps/{id}/releases" \
 
 版本号、包名、签名指纹与图标全部从 APK 自动解析；版本号重复会在落盘前被拒绝（409）。
 
-## 四、页面与元数据
+## 六、健康检查与运维
+
+`GET /api/health` —— 检查数据库连通性与存储目录可写权限，正常返回 200，异常返回 503，响应禁用缓存，适合监控与部署探活：
+
+```json
+{
+  "status": "ok",
+  "checks": { "database": true, "storage": true },
+  "uptime": 128,
+  "timestamp": "2026-11-27T14:10:09.000Z"
+}
+```
+
+`npm run analytics:prune` —— 清理过期统计事件，默认保留 180 天，可用 `ANALYTICS_RETENTION_DAYS` 调整，建议配合 cron 每天执行。
+
+## 七、页面与元数据
 
 | 路径 | 说明 |
 |---|---|
-| `/api/openapi` | OpenAPI 3.1 描述 |
+| `/api/openapi` | OpenAPI 3.1 描述，浏览器访问为可视化文档 |
 | `/manifest.webmanifest` | PWA 清单（可添加到主屏） |
 | `/robots.txt` | 抓取规则，屏蔽 `/admin` 与 `/api` |
 | `/sitemap.xml` | 首页与公开应用详情 |

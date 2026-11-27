@@ -658,3 +658,15 @@ HTTP 冒烟实测明细（种子数据：`smoke-pack`，真实 APK 4026 版，�
 | 客户端上报 | 通过 | Flutter 客户端拉起安装器时写入待上报队列，下次启动确认已安装且版本号达标后上报，区分首次安装/更新，失败保留重试 |
 | 客户端检查 | 通过 | `flutter analyze` 无问题；详情页、更新页与自更新入口均传入包名 |
 | 质量 | 通过 | `typecheck`、`lint`、`test`（74/74）、`build` 通过；`/api/health` 与更新日志页本地验证正常 |
+
+### 接口文档与 JSON 美化（B45）
+
+| 项目 | 结果 | 证据 |
+|---|---|---|
+| JSON 美化视图 | 通过 | 浏览器访问 JSON 接口自动渲染带语法高亮的页面；实测 `/api/health`、`/api/public/apps`、`/api/update/check`、`/api/admin/apps` 均返回 `text/html`，程序调用仍返回 `application/json` |
+| 原始 JSON 兜底 | 通过 | 追加 `?format=json` 时即使 Accept 含 `text/html` 也返回原始 JSON；视图页提供「原始 JSON」链接 |
+| 错误与状态透传 | 通过 | `/api/public/apps/no-such-app` 美化页返回 404；后台接口转发会话 Cookie，管理员访问返回 200 |
+| 安全边界 | 通过 | 视图仅允许 `/api/` 站内路径，外部地址返回 400；下载与资源接口不进入美化流程 |
+| 接口文档 | 通过 | `/docs` 新增健康检查说明、频率限制表与 `?format=json` 提示；`API_AppStore.md` 补充安装/页面浏览上报、健康检查、限流与运维章节 |
+| OpenAPI | 通过 | 新增 `/api/health`、`analytics` 与 `ops` 标签、429 与 `Retry-After` 定义；浏览器访问 `/api/openapi` 可见 |
+| 质量 | 通过 | `typecheck`、`lint`、`build` 通过；代理改写改用请求头传参，避免 Next 改写丢失查询参数 |
