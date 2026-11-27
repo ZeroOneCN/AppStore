@@ -140,4 +140,52 @@ describe("分析服务", () => {
     expect(overview.totals.pv).toBe(1);
     expect(overview.topApps.map((app) => app.id)).toEqual([appA.id]);
   });
+
+  it("自定义起止日期只统计区间内事件", async () => {
+    const app = await seedApp();
+    await prisma.analyticsEvent.createMany({
+      data: [
+        {
+          type: "page_view",
+          appId: app.id,
+          path: "/inside",
+          visitorId: "in",
+          createdAt: new Date("2026-11-10T10:00:00"),
+        },
+        {
+          type: "page_view",
+          appId: app.id,
+          path: "/outside",
+          visitorId: "out",
+          createdAt: new Date("2026-10-01T10:00:00"),
+        },
+      ],
+    });
+
+    const overview = await getAnalyticsOverview({
+      start: "2026-11-01",
+      end: "2026-11-20",
+    });
+    expect(overview.totals.pv).toBe(1);
+    expect(overview.range.start).toBe("2026-11-01");
+    expect(overview.range.end).toBe("2026-11-20");
+  });
+
+  it("一年范围按月汇总", async () => {
+    const app = await seedApp();
+    await prisma.analyticsEvent.create({
+      data: { type: "download", appId: app.id, path: "/download", visitorId: "v9" },
+    });
+
+    const end = new Date();
+    const start = new Date();
+    start.setDate(start.getDate() - 364);
+    const startText = start.toISOString().slice(0, 10);
+    const endText = end.toISOString().slice(0, 10);
+
+    const overview = await getAnalyticsOverview({ start: startText, end: endText });
+    expect(overview.granularity).toBe("month");
+    expect(overview.series.length).toBeGreaterThanOrEqual(12);
+    expect(overview.totals.downloads).toBe(1);
+  });
 });

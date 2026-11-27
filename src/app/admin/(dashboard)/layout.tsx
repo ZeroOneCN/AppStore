@@ -38,6 +38,12 @@ const NAV_ITEMS: ConsoleNavItem[] = [
     icon: "M5 20V10m5 10V4m5 16v-7m5 7V8",
   },
   {
+    href: "/admin/changelog",
+    label: "更新日志",
+    group: "系统",
+    icon: "M6 3h12a2 2 0 0 1 2 2v16l-3-2-3 2-3-2-3 2V5a2 2 0 0 1 2-2Zm3 5h6M9 12h6",
+  },
+  {
     href: "/admin/logs",
     label: "操作日志",
     group: "系统",

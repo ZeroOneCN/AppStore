@@ -8,9 +8,12 @@ type AnalyticsEventType = "page_view" | "download" | "install";
 /** 安装类型 */
 export type InstallType = "install" | "update";
 
-/** 单日趋势数据 */
+/** 单日/单周/单月趋势数据 */
 export interface AnalyticsPoint {
+  /** 桶标识：日期、周起始日期或 YYYY-MM */
   date: string;
+  /** 图表展示标签 */
+  label: string;
   pv: number;
   uv: number;
   downloads: number;
@@ -33,9 +36,14 @@ export interface AnalyticsTopApp {
   installs: number;
 }
 
+/** 趋势粒度 */
+export type AnalyticsGranularity = "day" | "week" | "month";
+
 /** 数据概览 */
 export interface AnalyticsOverview {
   days: number;
+  range: { start: string; end: string };
+  granularity: AnalyticsGranularity;
   totals: {
     pv: number;
     uv: number;
@@ -53,6 +61,17 @@ export interface AnalyticsOverview {
   hasData: boolean;
 }
 
+/** 统计算入范围 */
+export interface AnalyticsRangeInput {
+  /** 预设天数：7 / 30 / 90 / 365 */
+  days?: number;
+  /** 自定义开始日期 YYYY-MM-DD */
+  start?: string;
+  /** 自定义结束日期 YYYY-MM-DD */
+  end?: string;
+  developerId?: string | null;
+}
+
 /** 记录事件时的公共上下文 */
 interface EventContext {
   ip: string;
@@ -63,18 +82,45 @@ interface EventContext {
   refererHost: string;
 }
 
+/** 趋势桶 */
+interface RangeBucket {
+  key: string;
+  label: string;
+  start: number;
+  end: number;
+}
+
+/** 解析后的时间范围 */
+interface ResolvedRange {
+  start: Date;
+  end: Date;
+  days: number;
+  granularity: AnalyticsGranularity;
+  buckets: RangeBucket[];
+}
+
 /** 页面浏览去重窗口（毫秒） */
 const PAGE_VIEW_DEDUPE_MS = 60_000;
 /** 安装上报去重窗口（毫秒） */
 const INSTALL_DEDUPE_MS = 5 * 60_000;
+/** 允许的预设天数 */
+const PRESET_DAYS = [7, 30, 90, 365];
+/** 自定义范围最长时间（天） */
+const MAX_RANGE_DAYS = 731;
 /** 简单去重缓存，避免刷新或重试造成重复计数 */
 const dedupeCache = new Map<string, number>();
 
 /** 常见爬虫 UA 关键字 */
 const BOT_PATTERN = /bot|crawl|spider|slurp|bingpreview|headless|python-requests|curl\//i;
 
-/** 按天格式化（东八区），用于趋势聚合 */
+/** 按天格式化（东八区） */
 const dayFormatter = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Shanghai" });
+/** 按月格式化（东八区） */
+const monthFormatter = new Intl.DateTimeFormat("sv-SE", {
+  timeZone: "Asia/Shanghai",
+  year: "numeric",
+  month: "2-digit",
+});
 
 /**
  * 读取客户端 IP：优先 X-Real-IP，其次取 X-Forwarded-For 最后一跳。
@@ -323,12 +369,158 @@ export async function recordInstall(input: {
   return true;
 }
 
-/** 空的概览结果 */
-function emptyOverview(days: number, series: AnalyticsPoint[]): AnalyticsOverview {
+/**
+ * 解析 YYYY-MM-DD 为本地日期。
+ * @param value 日期文本
+ * @param endOfDay 是否取当天结束
+ * @returns 日期对象，非法时返回 null
+ */
+function parseDate(value?: string, endOfDay = false): Date | null {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const date = new Date(`${value}T${endOfDay ? "23:59:59.999" : "00:00:00"}`);
+  if (Number.isNaN(date.getTime())) return null;
+  return date;
+}
+
+/**
+ * 本地当天零点。
+ * @param date 日期
+ * @returns 新日期对象
+ */
+function startOfDay(date: Date): Date {
+  const result = new Date(date);
+  result.setHours(0, 0, 0, 0);
+  return result;
+}
+
+/**
+ * 按范围生成趋势桶：短区间按天、中区间按周、长区间按月。
+ * @param start 开始时间
+ * @param end 结束时间
+ * @param granularity 粒度
+ * @returns 桶列表
+ */
+function buildBuckets(start: Date, end: Date, granularity: AnalyticsGranularity): RangeBucket[] {
+  const buckets: RangeBucket[] = [];
+
+  if (granularity === "day") {
+    const cursor = new Date(start);
+    while (cursor <= end) {
+      const next = new Date(cursor);
+      next.setDate(next.getDate() + 1);
+      buckets.push({
+        key: dayFormatter.format(cursor),
+        label: dayFormatter.format(cursor).slice(5).replace("-", "/"),
+        start: cursor.getTime(),
+        end: next.getTime() - 1,
+      });
+      cursor.setDate(cursor.getDate() + 1);
+    }
+    return buckets;
+  }
+
+  if (granularity === "week") {
+    let cursor = new Date(start);
+    let index = 0;
+    while (cursor <= end) {
+      const next = new Date(cursor);
+      next.setDate(next.getDate() + 7);
+      buckets.push({
+        key: `w${index}`,
+        label: dayFormatter.format(cursor).slice(5).replace("-", "/"),
+        start: cursor.getTime(),
+        end: Math.min(next.getTime() - 1, end.getTime()),
+      });
+      cursor = next;
+      index += 1;
+    }
+    return buckets;
+  }
+
+  const cursor = new Date(start.getFullYear(), start.getMonth(), 1);
+  while (cursor <= end) {
+    const monthStart = new Date(cursor);
+    const next = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1);
+    const key = monthFormatter.format(cursor);
+    buckets.push({
+      key,
+      label: key.replace("-", "/"),
+      start: Math.max(monthStart.getTime(), start.getTime()),
+      end: Math.min(next.getTime() - 1, end.getTime()),
+    });
+    cursor.setMonth(cursor.getMonth() + 1);
+  }
+  return buckets;
+}
+
+/**
+ * 计算事件所属趋势桶的键。
+ * @param date 事件时间
+ * @param granularity 粒度
+ * @param start 统计开始时间
+ * @returns 桶键
+ */
+function bucketKeyFor(date: Date, granularity: AnalyticsGranularity, start: Date): string {
+  if (granularity === "day") return dayFormatter.format(date);
+  if (granularity === "month") return monthFormatter.format(date);
+  const diff = startOfDay(date).getTime() - startOfDay(start).getTime();
+  return `w${Math.max(0, Math.floor(diff / (7 * 86_400_000)))}`;
+}
+
+/**
+ * 解析统计时间范围，支持预设天数与自定义起止日期。
+ * @param input 范围输入
+ * @returns 起止时间、天数、粒度与桶
+ */
+function resolveRange(input: AnalyticsRangeInput): ResolvedRange {
+  const rangeStart = parseDate(input.start, false);
+  const rangeEnd = parseDate(input.end, true);
+
+  let start: Date;
+  let end: Date;
+
+  if (rangeStart && rangeEnd) {
+    start = rangeStart <= rangeEnd ? rangeStart : rangeEnd;
+    end = rangeStart <= rangeEnd ? rangeEnd : rangeStart;
+    const spanDays = Math.floor((startOfDay(end).getTime() - start.getTime()) / 86_400_000) + 1;
+    if (spanDays > MAX_RANGE_DAYS) {
+      start = new Date(startOfDay(end));
+      start.setDate(start.getDate() - (MAX_RANGE_DAYS - 1));
+    }
+  } else {
+    const days = input.days && PRESET_DAYS.includes(input.days) ? input.days : 30;
+    end = new Date();
+    start = startOfDay(new Date());
+    start.setDate(start.getDate() - (days - 1));
+  }
+
+  const days = Math.floor((startOfDay(end).getTime() - startOfDay(start).getTime()) / 86_400_000) + 1;
+  const granularity: AnalyticsGranularity = days <= 62 ? "day" : days <= 200 ? "week" : "month";
+
   return {
+    start,
+    end,
     days,
+    granularity,
+    buckets: buildBuckets(start, end, granularity),
+  };
+}
+
+/** 空的概览结果 */
+function emptyOverview(range: ResolvedRange): AnalyticsOverview {
+  return {
+    days: range.days,
+    range: { start: dayFormatter.format(range.start), end: dayFormatter.format(range.end) },
+    granularity: range.granularity,
     totals: { pv: 0, uv: 0, downloads: 0, installs: 0, newInstalls: 0, updates: 0, uniqueDevices: 0 },
-    series,
+    series: range.buckets.map((bucket) => ({
+      date: bucket.key,
+      label: bucket.label,
+      pv: 0,
+      uv: 0,
+      downloads: 0,
+      installs: 0,
+    })),
     channels: [],
     devices: [],
     systems: [],
@@ -355,23 +547,8 @@ function topBreakdown(map: Map<string, number>, limit = 8): AnalyticsBreakdown[]
  * @param input 时间范围与开发者过滤
  * @returns 概览数据
  */
-export async function getAnalyticsOverview(input: {
-  days: number;
-  developerId?: string | null;
-}): Promise<AnalyticsOverview> {
-  const days = [7, 30, 90].includes(input.days) ? input.days : 30;
-  const since = new Date();
-  since.setHours(0, 0, 0, 0);
-  since.setDate(since.getDate() - (days - 1));
-
-  // 初始化完整日期序列，保证无数据的日期也有 0 值
-  const seriesMap = new Map<string, AnalyticsPoint>();
-  for (let offset = 0; offset < days; offset += 1) {
-    const date = new Date(since);
-    date.setDate(since.getDate() + offset);
-    const key = dayFormatter.format(date);
-    seriesMap.set(key, { date: key, pv: 0, uv: 0, downloads: 0, installs: 0 });
-  }
+export async function getAnalyticsOverview(input: AnalyticsRangeInput): Promise<AnalyticsOverview> {
+  const range = resolveRange(input);
 
   let appFilter: { in: string[] } | undefined;
   let apps: { id: string; name: string; slug: string }[] = [];
@@ -380,17 +557,23 @@ export async function getAnalyticsOverview(input: {
       where: { developerId: input.developerId },
       select: { id: true, name: true, slug: true },
     });
-    if (apps.length === 0) return emptyOverview(days, [...seriesMap.values()]);
+    if (apps.length === 0) return emptyOverview(range);
     appFilter = { in: apps.map((app) => app.id) };
   }
 
   const uvSet = new Set<string>();
   const deviceSet = new Set<string>();
-  const dayVisitors = new Map<string, Set<string>>();
+  const bucketVisitors = new Map<string, Set<string>>();
   const channelMap = new Map<string, number>();
   const deviceMap = new Map<string, number>();
   const systemMap = new Map<string, number>();
   const appMap = new Map<string, { pv: number; downloads: number; installs: number }>();
+  const pointMap = new Map<string, AnalyticsPoint>(
+    range.buckets.map((bucket) => [
+      bucket.key,
+      { date: bucket.key, label: bucket.label, pv: 0, uv: 0, downloads: 0, installs: 0 },
+    ]),
+  );
 
   let pv = 0;
   let downloads = 0;
@@ -398,9 +581,9 @@ export async function getAnalyticsOverview(input: {
   let newInstalls = 0;
   let updates = 0;
 
-  const detailed = await prisma.analyticsEvent.findMany({
+  const events = await prisma.analyticsEvent.findMany({
     where: {
-      createdAt: { gte: since },
+      createdAt: { gte: range.start, lte: range.end },
       ...(appFilter ? { appId: appFilter } : {}),
     },
     select: {
@@ -416,38 +599,33 @@ export async function getAnalyticsOverview(input: {
     },
   });
 
-  for (const event of detailed) {
-    const dateKey = dayFormatter.format(event.createdAt);
-    const point = seriesMap.get(dateKey);
+  for (const event of events) {
+    const bucketKey = bucketKeyFor(event.createdAt, range.granularity, range.start);
+    const point = pointMap.get(bucketKey);
 
     if (event.type === "page_view") {
       pv += 1;
-      if (event.visitorId) {
-        uvSet.add(event.visitorId);
-        const set = dayVisitors.get(dateKey) ?? new Set<string>();
-        set.add(event.visitorId);
-        dayVisitors.set(dateKey, set);
-      }
       if (point) point.pv += 1;
     } else if (event.type === "download") {
       downloads += 1;
-      if (event.visitorId) {
-        uvSet.add(event.visitorId);
-        const set = dayVisitors.get(dateKey) ?? new Set<string>();
-        set.add(event.visitorId);
-        dayVisitors.set(dateKey, set);
-      }
       if (point) point.downloads += 1;
     } else if (event.type === "install") {
       installs += 1;
+      if (point) point.installs += 1;
       if (event.installType === "update") updates += 1;
       else newInstalls += 1;
       if (event.visitorId) deviceSet.add(event.visitorId);
-      if (point) point.installs += 1;
       const deviceName = event.deviceModel || "未知设备";
       const systemName = event.osVersion || "未知系统";
       deviceMap.set(deviceName, (deviceMap.get(deviceName) ?? 0) + 1);
       systemMap.set(systemName, (systemMap.get(systemName) ?? 0) + 1);
+    }
+
+    if (event.visitorId && (event.type === "page_view" || event.type === "download")) {
+      uvSet.add(event.visitorId);
+      const set = bucketVisitors.get(bucketKey) ?? new Set<string>();
+      set.add(event.visitorId);
+      bucketVisitors.set(bucketKey, set);
     }
 
     if (event.type === "page_view" || event.type === "download") {
@@ -464,9 +642,9 @@ export async function getAnalyticsOverview(input: {
     }
   }
 
-  const series = [...seriesMap.entries()].map(([date, point]) => ({
+  const series: AnalyticsPoint[] = [...pointMap.values()].map((point) => ({
     ...point,
-    uv: dayVisitors.get(date)?.size ?? 0,
+    uv: bucketVisitors.get(point.date)?.size ?? 0,
   }));
 
   if (!input.developerId) {
@@ -489,7 +667,9 @@ export async function getAnalyticsOverview(input: {
     .slice(0, 8);
 
   return {
-    days,
+    days: range.days,
+    range: { start: dayFormatter.format(range.start), end: dayFormatter.format(range.end) },
+    granularity: range.granularity,
     totals: {
       pv,
       uv: uvSet.size,

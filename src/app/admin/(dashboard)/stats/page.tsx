@@ -27,14 +27,27 @@ function MetricCard({ label, value, hint }: { label: string; value: number; hint
 }
 
 /**
- * 阅读时间范围参数，仅允许 7 / 30 / 90。
+ * 阅读时间范围参数：自定义起止日期优先，否则取预设天数。
  * @param params 查询参数
- * @returns 天数
+ * @returns 统计范围与当前预设
  */
-function readDays(params: Record<string, string | string[] | undefined>): number {
-  const raw = Array.isArray(params.days) ? params.days[0] : params.days;
-  const value = Number(raw);
-  return [7, 30, 90].includes(value) ? value : 30;
+function readRange(params: Record<string, string | string[] | undefined>): {
+  days: number;
+  start?: string;
+  end?: string;
+  preset: number | null;
+} {
+  const pick = (value: string | string[] | undefined) =>
+    Array.isArray(value) ? value[0] : value;
+  const start = pick(params.start);
+  const end = pick(params.end);
+  if (start && end && /^\d{4}-\d{2}-\d{2}$/.test(start) && /^\d{4}-\d{2}-\d{2}$/.test(end)) {
+    return { days: 30, start, end, preset: null };
+  }
+
+  const rawDays = Number(pick(params.days));
+  const days = [7, 30, 90, 365].includes(rawDays) ? rawDays : 30;
+  return { days, preset: days };
 }
 
 /**
@@ -47,9 +60,13 @@ async function StatsContent({ searchParams }: { searchParams: SearchParams }) {
   await requireAdminPage();
 
   const params = await searchParams;
-  const days = readDays(params);
+  const range = readRange(params);
   const [analytics, stats] = await Promise.all([
-    getAnalyticsOverview({ days }),
+    getAnalyticsOverview({
+      days: range.days,
+      start: range.start,
+      end: range.end,
+    }),
     getAdminStats(),
   ]);
 
@@ -61,7 +78,7 @@ async function StatsContent({ searchParams }: { searchParams: SearchParams }) {
         data={analytics}
         appHrefBase="/admin/apps"
         rangeBasePath="/admin/stats"
-        days={days}
+        preset={range.preset}
       />
 
       <section className="mt-6">

@@ -42,7 +42,7 @@ function MetricCard({
  */
 function TrendChart({ series }: { series: AnalyticsPoint[] }) {
   const max = Math.max(1, ...series.map((point) => Math.max(point.pv, point.downloads)));
-  const step = series.length > 60 ? 15 : series.length > 20 ? 5 : 1;
+  const labelStep = series.length <= 14 ? 1 : Math.ceil(series.length / 10);
 
   return (
     <div>
@@ -51,7 +51,7 @@ function TrendChart({ series }: { series: AnalyticsPoint[] }) {
           <div
             key={point.date}
             className="group flex h-full min-w-0 flex-1 items-end justify-center gap-[2px]"
-            title={`${point.date} · PV ${point.pv} · UV ${point.uv} · 下载 ${point.downloads}`}
+            title={`${point.label} · PV ${point.pv} · UV ${point.uv} · 下载 ${point.downloads}`}
           >
             <span
               className="w-full max-w-[7px] rounded-t bg-brand/75 transition group-hover:bg-brand"
@@ -70,7 +70,7 @@ function TrendChart({ series }: { series: AnalyticsPoint[] }) {
             key={point.date}
             className="min-w-0 flex-1 text-center text-[10px] text-neutral-400"
           >
-            {index % step === 0 ? point.date.slice(5).replace("-", "/") : ""}
+            {index % labelStep === 0 ? point.label : ""}
           </span>
         ))}
       </div>
@@ -198,14 +198,21 @@ export function AnalyticsDashboard({
   data,
   appHrefBase,
   rangeBasePath,
-  days,
+  preset,
 }: {
   data: AnalyticsOverview;
   appHrefBase: string;
   rangeBasePath: string;
-  days: number;
+  preset: number | null;
 }) {
-  const ranges = [7, 30, 90];
+  const ranges = [
+    { days: 7, label: "7 天" },
+    { days: 30, label: "30 天" },
+    { days: 90, label: "90 天" },
+    { days: 365, label: "1 年" },
+  ];
+  const granularityLabel =
+    data.granularity === "day" ? "按天" : data.granularity === "week" ? "按周" : "按月";
 
   return (
     <div className="space-y-4">
@@ -213,22 +220,54 @@ export function AnalyticsDashboard({
         <div className="flex items-center gap-1 rounded-xl bg-black/[0.04] p-1 dark:bg-white/[0.06]">
           {ranges.map((range) => (
             <Link
-              key={range}
-              href={`${rangeBasePath}?days=${range}`}
+              key={range.days}
+              href={`${rangeBasePath}?days=${range.days}`}
               className={`rounded-lg px-3 py-1.5 text-xs transition ${
-                days === range
+                preset === range.days
                   ? "bg-white font-medium text-neutral-900 shadow-sm dark:bg-neutral-800 dark:text-white"
                   : "text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200"
               }`}
             >
-              {range} 天
+              {range.label}
             </Link>
           ))}
         </div>
-        <p className="text-[11px] text-neutral-400">
-          {data.hasData ? `统计区间：最近 ${data.days} 天` : "数据从页面访问与下载发生后开始累积"}
-        </p>
+
+        <form method="get" action={rangeBasePath} className="flex flex-wrap items-center gap-2">
+          <input
+            type="date"
+            name="start"
+            defaultValue={data.range.start}
+            aria-label="开始日期"
+            className="rounded-lg border border-neutral-200 bg-white px-2 py-1.5 text-xs text-neutral-700 outline-none focus:border-brand dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200"
+          />
+          <span className="text-xs text-neutral-400">至</span>
+          <input
+            type="date"
+            name="end"
+            defaultValue={data.range.end}
+            aria-label="结束日期"
+            className="rounded-lg border border-neutral-200 bg-white px-2 py-1.5 text-xs text-neutral-700 outline-none focus:border-brand dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200"
+          />
+          <button
+            type="submit"
+            className="rounded-lg bg-brand px-3 py-1.5 text-xs font-medium text-white transition hover:bg-brand-deep"
+          >
+            查询
+          </button>
+          {preset === null ? (
+            <Link href={rangeBasePath} className="text-xs text-neutral-400 transition hover:text-neutral-700 dark:hover:text-neutral-200">
+              清除
+            </Link>
+          ) : null}
+        </form>
       </div>
+
+      <p className="text-[11px] text-neutral-400">
+        {data.hasData
+          ? `统计区间：${data.range.start} 至 ${data.range.end}，共 ${data.days} 天（${granularityLabel}汇总）`
+          : "数据从页面访问与下载发生后开始累积"}
+      </p>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <MetricCard label="页面浏览 PV" value={data.totals.pv} hint="公开页面访问次数" tone="brand" />
