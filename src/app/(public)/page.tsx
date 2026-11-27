@@ -3,7 +3,6 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 import { AppCard, AppIcon } from "@/components/app-card";
 import { PageViewTracker } from "@/components/analytics/page-view-tracker";
-import { CodeTabs } from "@/components/code-tabs";
 import { StatCard } from "@/components/stat-card";
 import { getRequestOrigin } from "@/server/http/base-url";
 import { listPublicApps, type AppCardDto } from "@/server/services/app.service";
@@ -41,6 +40,13 @@ const CAPABILITIES = [
     description: "下载链接带时效签名，防止被长期外链与恶意抓取。",
     path: "M10 14a4 4 0 0 1 0-5.7l2.3-2.3a4 4 0 0 1 5.7 5.7L16.7 13M14 10a4 4 0 0 1 0 5.7l-2.3 2.3a4 4 0 0 1-5.7-5.7L7.3 11",
   },
+];
+
+/** 首屏接入概览：不展示代码，只保留最关键的三个动作 */
+const ACCESS_STEPS = [
+  { title: "发起检查", description: "调用一次更新检查接口" },
+  { title: "拿到结果", description: "版本对比与强制更新标记" },
+  { title: "下载校验", description: "签名地址 + SHA-256 校验" },
 ];
 
 /** 三步接入指引 */
@@ -165,24 +171,10 @@ async function HomeContent() {
     ? `${checkEndpoint}?packageName=${encodeURIComponent(tryApp.packageName)}&versionCode=1`
     : null;
 
-  /** 一行接入示例：复制后替换包名与版本号即可使用 */
-  const integrationSnippets = [
-    {
-      id: "js",
-      label: "JavaScript",
-      code: `fetch("${checkEndpoint}?packageName=com.example.app&versionCode=12").then((r) => r.json()).then(console.log);`,
-    },
-    {
-      id: "curl",
-      label: "cURL",
-      code: `curl "${checkEndpoint}?packageName=com.example.app&versionCode=12"`,
-    },
-  ];
-
   return (
     <div className="flex flex-1 flex-col">
       <PageViewTracker path="/" />
-      {/* Hero：大标题、行动按钮与右侧接口预览 */}
+      {/* Hero：大标题、行动按钮与右侧接入概览 */}
       <section className="page-shell relative overflow-hidden pt-10 pb-8 sm:pt-16 sm:pb-12">
         <div className="hero-glow -top-24 left-1/2 h-72 w-[520px] -translate-x-1/2" />
         <div
@@ -247,63 +239,58 @@ async function HomeContent() {
               ) : null}
             </div>
 
-            <dl className="mt-8 flex max-w-xl gap-2 overflow-x-auto pb-1 sm:grid sm:grid-cols-4 sm:overflow-visible sm:pb-0">
-              <div className="min-w-[112px] flex-1 sm:min-w-0">
+            <dl className="mt-8 grid max-w-xl grid-cols-4 gap-1.5 sm:gap-2">
+              <div className="min-w-0">
                 <StatCard label="应用" value={apps.length} tone="brand" />
               </div>
-              <div className="min-w-[112px] flex-1 sm:min-w-0">
+              <div className="min-w-0">
                 <StatCard label="累计下载" value={downloads} />
               </div>
-              <div className="min-w-[112px] flex-1 sm:min-w-0">
+              <div className="min-w-0">
                 <StatCard label="Android" value={androidCount} />
               </div>
-              <div className="min-w-[112px] flex-1 sm:min-w-0">
+              <div className="min-w-0">
                 <StatCard label="网页作品" value={webCount} />
               </div>
             </dl>
           </div>
 
           <div className="relative min-w-0">
-            <div className="surface p-4 sm:p-5" style={{ boxShadow: "var(--shadow-float)" }}>
-              <div className="flex items-center gap-1.5 border-b border-black/[0.06] pb-3 dark:border-white/10">
-                <span className="size-2.5 rounded-full bg-[#ff5f57]" />
-                <span className="size-2.5 rounded-full bg-[#febc2e]" />
-                <span className="size-2.5 rounded-full bg-[#28c840]" />
-                <span className="ml-2 truncate font-mono text-[10px] text-neutral-400">
-                  GET /api/update/check
-                </span>
-              </div>
-              <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-                <p className="text-[13px] font-semibold">接入更新检查，一行就够</p>
-                <div className="flex items-center gap-1.5">
-                  <span className="chip">无需 SDK</span>
-                  <span className="chip">GET</span>
-                </div>
+            <div className="surface p-5 sm:p-6" style={{ boxShadow: "var(--shadow-float)" }}>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-[13px] font-semibold">接入很轻，一次请求就够</p>
+                <span className="chip">无需 SDK</span>
               </div>
               <p className="mt-2 text-xs leading-5 text-neutral-500 dark:text-neutral-400">
-                替换包名与版本号，复制到项目里即可拿到更新信息。
+                客户端启动时调用一次，直接拿到版本、更新日志与签名下载地址。
               </p>
 
-              <div className="mt-3">
-                <CodeTabs tabs={integrationSnippets} compact />
+              <ol className="mt-4 space-y-2">
+                {ACCESS_STEPS.map((item, index) => (
+                  <li
+                    key={item.title}
+                    className="flex items-center gap-3 rounded-xl bg-black/[0.025] px-3 py-2.5 dark:bg-white/[0.04]"
+                  >
+                    <span className="grid size-7 shrink-0 place-items-center rounded-full bg-brand/10 text-[11px] font-semibold text-brand tabular-nums">
+                      {index + 1}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[12px] font-medium">{item.title}</p>
+                      <p className="truncate text-[11px] text-neutral-500 dark:text-neutral-400">
+                        {item.description}
+                      </p>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+
+              <div className="mt-4 flex flex-wrap gap-1.5">
+                <span className="chip">断点续传</span>
+                <span className="chip">SHA-256 校验</span>
+                <span className="chip">强制更新</span>
               </div>
 
-              <details className="group mt-3 hidden sm:block">
-                <summary className="flex cursor-pointer list-none items-center gap-1.5 text-[11px] text-neutral-400 transition hover:text-neutral-600 dark:hover:text-neutral-200">
-                  <span className="transition group-open:rotate-90">›</span>
-                  展开返回示例
-                </summary>
-                <pre className="code-block mt-2 text-[11px]">{`{
-  "hasUpdate": true,
-  "forceUpdate": false,
-  "latest": {
-    "versionName": "1.2.0",
-    "versionCode": 12,
-    "downloadUrl": "/api/download/xxx?exp=...&sig=..."
-  }
-}`}</pre>
-              </details>
-              <div className="mt-3 flex items-center justify-between gap-3 text-[11px] text-neutral-500 dark:text-neutral-400">
+              <div className="mt-4 flex items-center justify-between gap-3 border-t border-black/[0.05] pt-3 text-[11px] text-neutral-500 dark:border-white/[0.08] dark:text-neutral-400">
                 <span className="hidden sm:inline">下载链接 10 分钟有效</span>
                 <div className="flex items-center gap-3">
                   {tryUrl ? (
