@@ -84,6 +84,7 @@ class _AppDetailPageState extends State<AppDetailPage> {
       MaterialPageRoute<bool>(
         builder: (_) => DownloadInstallPage(
           appName: detail.app.name,
+          packageName: detail.app.packageName,
           fileKey: '${detail.app.slug}-${release.versionCode}',
           loadRelease: () async {
             // 每次开始下载前重新取票据，避免使用过期签名地址

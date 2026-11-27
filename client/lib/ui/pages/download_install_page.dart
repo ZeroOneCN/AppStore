@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../../core/api_exception.dart';
 import '../../core/formatters.dart';
 import '../../data/models.dart';
+import '../../services/analytics_service.dart';
 import '../../services/download_service.dart';
 import '../../services/install_service.dart';
 
@@ -15,10 +16,14 @@ class DownloadInstallPage extends StatefulWidget {
     required this.appName,
     required this.fileKey,
     required this.loadRelease,
+    this.packageName,
   });
 
   /// 应用名称，用于标题与提示。
   final String appName;
+
+  /// 目标应用包名，用于安装上报；未知时为空。
+  final String? packageName;
 
   /// 本地文件名标识，同一标识支持断点续传。
   final String fileKey;
@@ -41,6 +46,7 @@ class _DownloadInstallPageState extends State<DownloadInstallPage> {
   String? _error;
   String? _filePath;
   bool _installing = false;
+  ReleaseInfo? _release;
 
   @override
   void initState() {
@@ -67,6 +73,7 @@ class _DownloadInstallPageState extends State<DownloadInstallPage> {
 
     try {
       final release = await widget.loadRelease();
+      _release = release;
       if (!mounted) return;
       if (release.downloadUrl.isEmpty) {
         throw const ApiException('该版本暂无下载地址');
@@ -121,7 +128,24 @@ class _DownloadInstallPageState extends State<DownloadInstallPage> {
 
     setState(() => _installing = true);
     try {
-      await InstallService.instance.installApk(path);
+      final release = _release;
+      final packageName = widget.packageName ?? '';
+      // 安装前判断目标包是否已存在，用于区分首次安装与更新安装
+      var isUpdate = false;
+      if (packageName.isNotEmpty) {
+        final installed = await InstallService.instance.installedVersionCodes([packageName]);
+        isUpdate = installed.containsKey(packageName);
+      }
+
+      final launched = await InstallService.instance.installApk(path);
+      if (launched && release != null && packageName.isNotEmpty) {
+        // 写入待上报队列，下次启动确认安装成功后上报，避免中止安装造成高估
+        await AnalyticsService.instance.recordPendingInstall(
+          packageName: packageName,
+          versionCode: release.versionCode,
+          isUpdate: isUpdate,
+        );
+      }
       if (mounted) Navigator.of(context).pop(true);
     } catch (error) {
       if (!mounted) return;

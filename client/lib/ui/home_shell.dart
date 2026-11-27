@@ -107,6 +107,7 @@ class _HomeShellState extends State<HomeShell> {
       MaterialPageRoute<bool>(
         builder: (_) => DownloadInstallPage(
           appName: '应用仓库',
+          packageName: packageName,
           fileKey: '$packageName-${latest.versionCode}',
           loadRelease: () async {
             // 重新检查以获取最新的签名下载地址

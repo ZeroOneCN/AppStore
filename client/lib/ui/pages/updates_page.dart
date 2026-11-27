@@ -154,6 +154,7 @@ class _UpdatesPageState extends State<UpdatesPage> {
       MaterialPageRoute<bool>(
         builder: (_) => DownloadInstallPage(
           appName: item.appName,
+          packageName: item.packageName,
           fileKey:
               '${item.packageName}-${latest?.versionCode ?? item.installedVersionCode}',
           loadRelease: () async {

@@ -68,6 +68,15 @@ export function ReleaseManager({
 
   const currentRelease = releases.find((release) => release.isCurrent) ?? null;
   const drafts = releases.filter((release) => release.status === "DRAFT");
+  // 上一已发布版本：用于一键回滚，取版本号低于当前版本的最新一条
+  const previousRelease = currentRelease
+    ? releases.find(
+        (release) =>
+          release.status === "PUBLISHED" &&
+          !release.isCurrent &&
+          release.versionCode < currentRelease.versionCode,
+      ) ?? null
+    : null;
 
   /**
    * 删除历史版本（当前版本禁止删除）。
@@ -129,6 +138,22 @@ export function ReleaseManager({
     }
   }
 
+  /**
+   * 回滚到上一个已发布版本，前台下载与更新检查立即切换。
+   * @returns 无
+   */
+  async function handleRollback(): Promise<void> {
+    if (!previousRelease) return;
+    if (
+      !window.confirm(
+        `确定回滚到 v${previousRelease.versionName}（版本号 ${previousRelease.versionCode}）？前台下载与更新检查会立即切换到该版本。`,
+      )
+    ) {
+      return;
+    }
+    await runAction(previousRelease.id, "set-current");
+  }
+
   return (
     <div className="space-y-5">
       {currentRelease ? (
@@ -144,9 +169,21 @@ export function ReleaseManager({
                   : ""}
               </p>
             </div>
-            {showDownload ? (
-              <div className="shrink-0">
-                <DownloadButton releaseId={currentRelease.id} label="下载当前版本" variant="ghost" />
+            {showDownload || previousRelease ? (
+              <div className="flex shrink-0 flex-wrap items-center gap-2">
+                {previousRelease ? (
+                  <button
+                    type="button"
+                    onClick={() => void handleRollback()}
+                    disabled={acting === `${previousRelease.id}:set-current`}
+                    className="rounded-lg border border-white/30 px-3 py-2 text-xs font-medium text-white transition hover:bg-white/10 disabled:opacity-60"
+                  >
+                    回滚到 v{previousRelease.versionName}
+                  </button>
+                ) : null}
+                {showDownload ? (
+                  <DownloadButton releaseId={currentRelease.id} label="下载当前版本" variant="ghost" />
+                ) : null}
               </div>
             ) : null}
           </div>

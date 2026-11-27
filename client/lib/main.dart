@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'core/app_config.dart';
+import 'services/analytics_service.dart';
 import 'ui/home_shell.dart';
 
 /// 应用入口：先读取本地保存的服务端地址，再启动界面。
@@ -19,6 +22,8 @@ Future<void> main() async {
     ),
   );
   await AppConfig.instance.load();
+  // 后台确认上次拉起安装的应用是否已安装完成并上报统计，不阻塞首屏
+  unawaited(AnalyticsService.instance.flushPendingInstalls());
   runApp(const AppStoreApp());
 }
 

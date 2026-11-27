@@ -13,6 +13,7 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
+    "analytics:prune": "node scripts/prune-analytics.mjs",
     "init-admin": "tsx scripts/init-admin.ts"
   },
   "dependencies": {

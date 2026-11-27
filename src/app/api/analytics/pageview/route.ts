@@ -1,4 +1,5 @@
-import { recordPageView } from "@/server/services/analytics.service";
+import { clientIpFromRequest, recordPageView } from "@/server/services/analytics.service";
+import { enforceRateLimit } from "@/server/http/rate-limit";
 
 /**
  * 页面浏览上报：由前台信标调用，记录 PV/UV 与来源渠道。
@@ -6,6 +7,14 @@ import { recordPageView } from "@/server/services/analytics.service";
  * @returns 204 空响应
  */
 export async function POST(request: Request): Promise<Response> {
+  const limit = enforceRateLimit(`pageview:${clientIpFromRequest(request)}`, 60, 60_000);
+  if (!limit.allowed) {
+    return new Response(null, {
+      status: 429,
+      headers: { "retry-after": String(limit.retryAfter) },
+    });
+  }
+
   let body: unknown = null;
   try {
     body = await request.json();

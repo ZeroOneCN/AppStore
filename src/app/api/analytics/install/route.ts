@@ -1,4 +1,5 @@
-import { recordInstall, type InstallType } from "@/server/services/analytics.service";
+import { clientIpFromRequest, recordInstall, type InstallType } from "@/server/services/analytics.service";
+import { enforceRateLimit } from "@/server/http/rate-limit";
 
 /**
  * 安装上报：客户端在安装或更新完成后调用，用于统计首次安装、更新与设备信息。
@@ -7,6 +8,14 @@ import { recordInstall, type InstallType } from "@/server/services/analytics.ser
  * @returns 成功或应用不存在的 JSON 结果
  */
 export async function POST(request: Request): Promise<Response> {
+  const limit = enforceRateLimit(`install:${clientIpFromRequest(request)}`, 30, 60_000);
+  if (!limit.allowed) {
+    return Response.json(
+      { error: { code: "RATE_LIMITED", message: "上报过于频繁，请稍后再试" } },
+      { status: 429, headers: { "retry-after": String(limit.retryAfter) } },
+    );
+  }
+
   let body: unknown = null;
   try {
     body = await request.json();

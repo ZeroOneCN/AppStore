@@ -646,3 +646,15 @@ HTTP 冒烟实测明细（种子数据：`smoke-pack`，真实 APK 4026 版，�
 | 客户端示例 | 通过 | `docs/AppStore/INTEGRATION_AppStore.md` 新增第 4 章，包含 Kotlin（OkHttp）与 Flutter（http）示例，原「常见坑」顺延为第 5 章 |
 | 文档入口 | 通过 | 开发者后台「接入文档」内嵌公开文档，说明同步提及安装上报；OpenAPI 已有 `/api/analytics/install` 定义 |
 | 质量 | 通过 | `typecheck`、`lint`、`build` 通过；本地 `/docs` 渲染字段表与示例说明 |
+
+### 稳定性与发布效率（B44）
+
+| 项目 | 结果 | 证据 |
+|---|---|---|
+| 上报限流 | 通过 | 新增固定窗口限流器；页面浏览 60 次/分钟、安装上报 30 次/分钟，超限返回 429 与 `Retry-After`；3 项单元测试覆盖上限、窗口重置与键隔离 |
+| 健康检查 | 通过 | 新增 `GET /api/health`，检查数据库 `SELECT 1` 与存储目录可写，正常 200、异常 503，响应禁用缓存 |
+| 事件清理 | 通过 | 新增 `npm run analytics:prune`，默认删除 180 天前事件，`ANALYTICS_RETENTION_DAYS` 可调；README 增加 cron 示例 |
+| 一键回滚 | 通过 | 当前版本卡片新增「回滚到上一版」，自动定位低于当前版本号的最近已发布版本并调用 `set-current`，二次确认后切换 |
+| 客户端上报 | 通过 | Flutter 客户端拉起安装器时写入待上报队列，下次启动确认已安装且版本号达标后上报，区分首次安装/更新，失败保留重试 |
+| 客户端检查 | 通过 | `flutter analyze` 无问题；详情页、更新页与自更新入口均传入包名 |
+| 质量 | 通过 | `typecheck`、`lint`、`test`（74/74）、`build` 通过；`/api/health` 与更新日志页本地验证正常 |
