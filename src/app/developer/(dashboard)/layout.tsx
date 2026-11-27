@@ -20,6 +20,12 @@ const NAV_ITEMS: ConsoleNavItem[] = [
     icon: "M4 5h16v14H4V5Zm8 3v8m-4-4h8",
   },
   {
+    href: "/developer/analytics",
+    label: "数据统计",
+    group: "运营",
+    icon: "M4 20V10m6 10V4m6 16v-7m4 7H2",
+  },
+  {
     href: "/developer/docs",
     label: "接入文档",
     group: "资源",

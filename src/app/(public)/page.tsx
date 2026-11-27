@@ -2,6 +2,7 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { AppCard } from "@/components/app-card";
+import { PageViewTracker } from "@/components/analytics/page-view-tracker";
 import { CodeTabs } from "@/components/code-tabs";
 import { StatCard } from "@/components/stat-card";
 import { getRequestOrigin } from "@/server/http/base-url";
@@ -90,6 +91,7 @@ async function HomeContent() {
 
   return (
     <div className="flex flex-1 flex-col">
+      <PageViewTracker path="/" />
       {/* Hero：大标题、行动按钮与右侧接口预览 */}
       <section className="page-shell relative overflow-hidden pt-10 pb-8 sm:pt-16 sm:pb-12">
         <div className="hero-glow -top-24 left-1/2 h-72 w-[520px] -translate-x-1/2" />

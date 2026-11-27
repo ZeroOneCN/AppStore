@@ -2,6 +2,7 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { AppCard } from "@/components/app-card";
+import { PageViewTracker } from "@/components/analytics/page-view-tracker";
 import { EmptyState } from "@/components/empty-state";
 import { FilterBar } from "@/components/filter-bar";
 import { StatCard } from "@/components/stat-card";
@@ -65,6 +66,7 @@ async function AppsContent({ searchParams }: { searchParams: SearchParams }) {
 
   return (
     <div className="page-shell flex flex-1 flex-col py-8 sm:py-10">
+      <PageViewTracker path="/apps" />
       <header className="page-header">
         <div className="min-w-0">
           <p className="mb-2 text-[11px] font-medium tracking-[0.18em] text-brand uppercase">

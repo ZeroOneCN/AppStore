@@ -7,6 +7,7 @@ import { logger } from "@/server/infra/logger";
 import { resolveStoredPath } from "@/server/infra/paths";
 import { SIGN_TTL_SECONDS } from "@/server/infra/constants";
 import { getReleaseWithApp } from "@/server/services/release.service";
+import { recordDownload } from "@/server/services/analytics.service";
 import { verifyDownloadSignature } from "@/server/services/signing.service";
 
 /**
@@ -240,7 +241,16 @@ export async function GET(
     headers.set("Content-Length", String(end - start + 1));
     if (range) headers.set("Content-Range", `bytes ${start}-${end}/${size}`);
 
-    if (start === 0) incrementDownloadCounters(release.appId, release.id);
+    if (start === 0) {
+      incrementDownloadCounters(release.appId, release.id);
+      // 记录下载事件用于渠道与设备分析，失败不影响下载
+      void recordDownload({
+        request,
+        appId: release.appId,
+        releaseId: release.id,
+        referer: request.headers.get("referer"),
+      });
+    }
 
     const stream = Readable.toWeb(createReadStream(absolutePath, { start, end })) as ReadableStream<Uint8Array>;
     return new Response(stream, { status: range ? 206 : 200, headers });

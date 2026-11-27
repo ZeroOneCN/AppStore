@@ -13,6 +13,7 @@ const TOC = [
   { id: "semantics", label: "更新语义" },
   { id: "examples", label: "多语言示例" },
   { id: "download", label: "下载与校验" },
+  { id: "install-report", label: "安装上报（可选）" },
   { id: "public-apis", label: "其他公开接口" },
   { id: "errors", label: "错误码与限流" },
   { id: "faq", label: "常见问题" },
@@ -316,7 +317,8 @@ async function DocsContent({ embedded = false }: { embedded?: boolean }) {
           </p>
           <pre className="code-block mt-3">{`curl "${checkUrl}?packageName=com.example.app&versionCode=12"`}</pre>
           <ul className="mt-4 space-y-1.5 text-[13px] leading-6 text-neutral-500 dark:text-neutral-400">
-            <li>· 仅返回「公开」且「已发布」的 Android 版本，草稿与私有应用不会出现在结果中。</li>
+            <li>· 仅返回「已发布」的 Android 版本；草稿不会出现在结果中。</li>
+            <li>· 私有应用不进入前台列表，但检查接口仍可用，便于上传者自行分发更新。</li>
             <li>· 包名必须与上传 APK 时解析出的包名一致，否则返回 404。</li>
             <li>· 同一 IP 每分钟最多 120 次请求，超出返回 429。</li>
           </ul>
@@ -461,6 +463,32 @@ async function DocsContent({ embedded = false }: { embedded?: boolean }) {
           </ul>
         </section>
 
+        <section id="install-report" className="surface scroll-mt-24 p-6 sm:p-8">
+          <h2 className="text-lg font-semibold">安装上报（可选）</h2>
+          <p className="mt-3 text-sm leading-7 text-neutral-600 dark:text-neutral-300">
+            下载接口无法判断是首次安装还是更新，也拿不到设备型号。若需要这类数据，请在安装完成后调用上报接口；
+            不接入时，后台仍会统计 PV、下载与渠道来源。
+          </p>
+          <pre className="code-block mt-3">{`POST ${base}/api/analytics/install
+Content-Type: application/json
+
+{
+  "packageName": "com.example.app",
+  "versionCode": 12,
+  "installType": "install",
+  "deviceModel": "Pixel 8",
+  "osVersion": "Android 15",
+  "channel": "wechat"
+}`}</pre>
+          <ul className="mt-4 space-y-1.5 text-[13px] leading-6 text-neutral-500 dark:text-neutral-400">
+            <li>· installType：首次安装传 install，覆盖安装传 update。</li>
+            <li>· deviceModel 与 osVersion 可选，用于后台的设备与系统分布。</li>
+            <li>· channel 可选，用于区分分发渠道；与页面地址的 ?from= 对应。</li>
+            <li>· 包名需与已发布应用一致，否则返回 404；成功返回 {`{"ok":true}`}。</li>
+            <li>· 同一设备同一版本 5 分钟内重复上报会自动去重。</li>
+          </ul>
+        </section>
+
         <section id="public-apis" className="surface scroll-mt-24 p-6 sm:p-8">
           <h2 className="text-lg font-semibold">其他公开接口</h2>
           <div className="mt-3 divide-y divide-black/[0.05] text-[13px] dark:divide-white/[0.08]">
@@ -469,6 +497,8 @@ async function DocsContent({ embedded = false }: { embedded?: boolean }) {
               ["GET /api/public/apps/{slug}", "应用详情，含截图、当前版本与历史版本"],
               ["GET /api/public/apps/{slug}/releases", "应用已发布的版本列表"],
               ["GET /api/public/releases/{id}/download-ticket", "获取带时效签名的下载短链"],
+              ["POST /api/analytics/install", "安装/更新上报（可选），记录首次安装、设备与渠道"],
+              ["POST /api/analytics/pageview", "页面浏览上报，由前台页面自动调用"],
               ["GET /api/openapi", "可视化接口文档；加 ?format=json 获取 OpenAPI 3.1 描述"],
             ].map(([path, desc]) => (
               <div key={path} className="flex flex-col gap-1 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
@@ -513,7 +543,7 @@ async function DocsContent({ embedded = false }: { embedded?: boolean }) {
             <div>
               <dt className="font-medium">为什么返回 404？</dt>
               <dd className="mt-1 leading-7 text-neutral-500 dark:text-neutral-400">
-                常见原因是包名与上传 APK 不一致、应用未公开，或还没有已发布的正式版本。
+                常见原因是包名与上传 APK 不一致，或还没有已发布的正式版本。
               </dd>
             </div>
             <div>

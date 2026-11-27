@@ -147,3 +147,40 @@ model InviteCode {
   @@index([usedAt])
 }
 
+/// 访问与安装分析事件，供管理员与开发者统计 PV/UV、下载与安装数据
+model AnalyticsEvent {
+  id          String   @id @default(cuid())
+  /// page_view | download | install
+  type        String
+  /// 关联应用；首页等通用页面为空
+  appId       String?
+  /// 关联版本；页面浏览为空
+  releaseId   String?
+  /// 页面路径或来源页面
+  path        String   @default("")
+  /// 渠道标识，取自 ?from= 或 UTM 参数
+  channel     String   @default("")
+  /// 来源域名
+  refererHost String   @default("")
+  /// 客户端原始 IP，按需保留
+  ip          String   @default("")
+  /// IP 哈希，用于访客去重
+  ipHash      String   @default("")
+  /// 访客标识：IP + UA + 日期哈希
+  visitorId   String   @default("")
+  userAgent   String   @default("")
+  /// 安装设备型号，客户端上报
+  deviceModel String   @default("")
+  /// 系统版本，客户端上报
+  osVersion   String   @default("")
+  /// install | update，仅安装事件
+  installType String   @default("")
+  versionCode Int?
+  createdAt   DateTime @default(now())
+
+  @@index([type, createdAt])
+  @@index([appId, createdAt])
+  @@index([visitorId, createdAt])
+  @@index([createdAt])
+}
+

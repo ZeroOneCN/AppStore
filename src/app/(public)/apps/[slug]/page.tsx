@@ -4,6 +4,7 @@ import { connection } from "next/server";
 import { cache, Suspense } from "react";
 import type { Metadata } from "next";
 import { AppIcon } from "@/components/app-card";
+import { PageViewTracker } from "@/components/analytics/page-view-tracker";
 import { DownloadButton } from "@/components/download-button";
 import { ScreenshotGallery } from "@/components/screenshot-gallery";
 import { VersionHistory } from "@/components/version-history";
@@ -119,6 +120,7 @@ async function AppDetailContent({ params }: { params: RouteParams }) {
 
   return (
     <div className="page-shell flex flex-1 flex-col py-8 sm:py-10">
+      <PageViewTracker path={`/apps/${app.slug}`} appId={app.id} />
       <nav className="flex items-center gap-1.5 text-xs text-neutral-500 dark:text-neutral-400" aria-label="面包屑">
         <Link href="/" className="transition hover:text-brand">
           首页

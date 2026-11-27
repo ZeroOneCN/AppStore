@@ -145,7 +145,7 @@ export async function GET(request: Request): Promise<Response> {
           tags: ["update"],
           summary: "按包名与版本号检查更新",
           description:
-            "公开接口，供应用内置检查更新；只返回公开且已发布的最新版本。单 IP 每分钟最多 120 次，超出返回 429。downloadUrl 为 10 分钟有效的签名直链。",
+            "公开接口，供应用内置检查更新；返回最新的已发布版本（私有应用不进入前台列表但仍可更新）。单 IP 每分钟最多 120 次，超出返回 429。downloadUrl 为 10 分钟有效的签名直链。",
           parameters: [
             { name: "packageName", in: "query", required: true, schema: { type: "string" } },
             { name: "versionCode", in: "query", required: true, schema: { type: "integer" } },
@@ -181,6 +181,66 @@ export async function GET(request: Request): Promise<Response> {
               },
             },
             "429": { description: "请求过于频繁" },
+          },
+        },
+      },
+      "/api/analytics/install": {
+        post: {
+          tags: ["analytics"],
+          summary: "安装/更新上报（可选）",
+          description:
+            "客户端在安装或更新完成后调用，用于统计首次安装、更新、设备与系统分布；未接入时仅统计下载。同一设备同一版本 5 分钟内重复上报会自动去重。",
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["packageName", "versionCode", "installType"],
+                  properties: {
+                    packageName: { type: "string" },
+                    versionCode: { type: "integer" },
+                    installType: { type: "string", enum: ["install", "update"] },
+                    deviceModel: { type: "string" },
+                    osVersion: { type: "string" },
+                    channel: { type: "string" },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            "200": { description: "上报成功：{ ok: true }" },
+            "400": { description: "参数缺失或 installType 非法" },
+            "404": { description: "包名未匹配到应用" },
+          },
+        },
+      },
+      "/api/analytics/pageview": {
+        post: {
+          tags: ["analytics"],
+          summary: "页面浏览上报",
+          description: "由前台页面信标自动调用，记录 PV/UV、来源域名与渠道；爬虫 UA 会被忽略。",
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["path"],
+                  properties: {
+                    path: { type: "string" },
+                    appId: { type: "string" },
+                    channel: { type: "string" },
+                    referrer: { type: "string" },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            "204": { description: "已记录" },
+            "400": { description: "path 缺失" },
           },
         },
       },

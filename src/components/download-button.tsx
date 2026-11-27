@@ -58,8 +58,13 @@ export function DownloadButton({
         return;
       }
 
-      // 下载为附件响应，页面本身不会跳走
-      window.location.assign(url);
+      // 下载为附件响应，页面本身不会跳走；透传渠道参数便于统计下载来源
+      const pageParams = new URLSearchParams(window.location.search);
+      const channel = pageParams.get("from") ?? pageParams.get("utm_source");
+      const target = channel
+        ? `${url}${url.includes("?") ? "&" : "?"}from=${encodeURIComponent(channel)}`
+        : url;
+      window.location.assign(target);
       started = true;
       // 浏览器处理下载期间恢复按钮，避免一直停留在加载态
       setTimeout(() => setLoading(false), 1500);
