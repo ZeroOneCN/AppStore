@@ -73,6 +73,10 @@ export function AppCard({ app }: { app: AppCardDto }) {
               </span>
             ) : null}
           </div>
+          {/* 固定预留开发者一行高度，未指派开发者时也占位，保持卡片对齐 */}
+          <p className="mt-0.5 min-h-[16px] truncate text-[11px] font-medium text-brand">
+            {app.developer ? `开发者 ${app.developer.displayName || app.developer.username}` : "\u00A0"}
+          </p>
           {/* 固定预留两行简介高度，保证不同卡片下方的标签与底栏对齐 */}
           <p className="mt-1 line-clamp-2 min-h-[40px] text-[13px] leading-5 text-neutral-500 dark:text-neutral-400">
             {app.summary}
