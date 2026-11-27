@@ -119,26 +119,24 @@ async function AppDetailContent({ params }: { params: RouteParams }) {
 
           <p className="mt-2 text-sm leading-6 text-neutral-600 dark:text-neutral-300">{app.summary}</p>
 
-          {/* 开发者信息前置展示，便于用户识别应用来源 */}
-          {app.developer ? (
-            <div className="mt-3 flex items-center gap-2">
-              <span
-                aria-hidden
-                className="grid size-6 shrink-0 place-items-center rounded-full bg-brand/10 text-[11px] font-semibold text-brand dark:bg-brand/20"
-              >
-                {(app.developer.displayName || app.developer.username).trim().charAt(0).toUpperCase()}
-              </span>
-              <span className="text-[13px] font-medium text-neutral-800 dark:text-neutral-100">
-                {app.developer.displayName || app.developer.username}
-              </span>
-              {app.developer.displayName ? (
-                <span className="text-xs text-neutral-400">@{app.developer.username}</span>
-              ) : null}
-              <span className="rounded-full bg-brand/10 px-2 py-0.5 text-[11px] font-medium text-brand dark:bg-brand/20">
-                开发者
-              </span>
-            </div>
-          ) : null}
+          {/* 开发者信息前置展示；未指派开发者时标记为平台官方 */}
+          <div className="mt-3 flex items-center gap-2">
+            <span
+              aria-hidden
+              className="grid size-6 shrink-0 place-items-center rounded-full bg-brand/10 text-[11px] font-semibold text-brand dark:bg-brand/20"
+            >
+              {(app.developer?.displayName || app.developer?.username || "官").trim().charAt(0).toUpperCase()}
+            </span>
+            <span className="text-[13px] font-medium text-neutral-800 dark:text-neutral-100">
+              {app.developer?.displayName || app.developer?.username || "平台官方"}
+            </span>
+            {app.developer?.displayName ? (
+              <span className="text-xs text-neutral-400">@{app.developer.username}</span>
+            ) : null}
+            <span className="rounded-full bg-brand/10 px-2 py-0.5 text-[11px] font-medium text-brand dark:bg-brand/20">
+              {app.developer ? "开发者" : "官方"}
+            </span>
+          </div>
 
           <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-neutral-500 dark:text-neutral-400">
             <span>{app.category}</span>
