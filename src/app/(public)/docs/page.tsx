@@ -480,12 +480,43 @@ Content-Type: application/json
   "osVersion": "Android 15",
   "channel": "wechat"
 }`}</pre>
+
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full min-w-[560px] text-left text-[13px]">
+              <thead className="text-xs text-neutral-500 dark:text-neutral-400">
+                <tr className="border-b border-black/[0.06] dark:border-white/[0.08]">
+                  <th className="py-2 pr-4 font-medium">字段</th>
+                  <th className="py-2 pr-4 font-medium">类型</th>
+                  <th className="py-2 pr-4 font-medium">必填</th>
+                  <th className="py-2 font-medium">说明</th>
+                </tr>
+              </thead>
+              <tbody className="text-neutral-600 dark:text-neutral-300">
+                {[
+                  ["packageName", "string", "是", "应用包名，必须与后台记录一致，否则返回 404"],
+                  ["versionCode", "integer", "是", "安装或更新后的版本号，与检查接口返回一致"],
+                  ["installType", "string", "是", "install 表示首次安装，update 表示覆盖更新"],
+                  ["deviceModel", "string", "否", "设备型号，用于后台设备分布，如 Pixel 8"],
+                  ["osVersion", "string", "否", "系统版本，用于系统分布，如 Android 15"],
+                  ["channel", "string", "否", "分发渠道，与页面地址的 ?from= 对应，如 wechat"],
+                ].map(([field, type, required, desc]) => (
+                  <tr key={field} className="border-b border-black/[0.04] last:border-0 dark:border-white/[0.06]">
+                    <td className="py-2 pr-4 font-mono text-xs">{field}</td>
+                    <td className="py-2 pr-4 text-neutral-500 dark:text-neutral-400">{type}</td>
+                    <td className="py-2 pr-4">{required}</td>
+                    <td className="py-2 text-neutral-500 dark:text-neutral-400">{desc}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
           <ul className="mt-4 space-y-1.5 text-[13px] leading-6 text-neutral-500 dark:text-neutral-400">
-            <li>· installType：首次安装传 install，覆盖安装传 update。</li>
-            <li>· deviceModel 与 osVersion 可选，用于后台的设备与系统分布。</li>
-            <li>· channel 可选，用于区分分发渠道；与页面地址的 ?from= 对应。</li>
-            <li>· 包名需与已发布应用一致，否则返回 404；成功返回 {`{"ok":true}`}。</li>
-            <li>· 同一设备同一版本 5 分钟内重复上报会自动去重。</li>
+            <li>· 在安装或更新完成后的首次启动调用一次，不必每次启动都上报。</li>
+            <li>· installType 判断：安装前查询目标包是否已存在，存在传 update，否则传 install。</li>
+            <li>· 成功返回 {`{"ok":true}`}；包名不存在返回 404，参数缺失或非法返回 400。</li>
+            <li>· 同一设备同一版本 5 分钟内重复上报会自动去重，重试不会重复计数。</li>
+            <li>· 不接入时，后台仍统计 PV、下载和渠道来源，只是缺少首次安装/更新与设备分布。</li>
           </ul>
         </section>
 

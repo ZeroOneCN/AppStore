@@ -157,7 +157,83 @@ Future<String> downloadApk(Map<String, dynamic> latest) async {
 
 安装通过 MethodChannel 调用原生 `ACTION_VIEW + FileProvider`；完整实现（断点续传、权限引导、进度回调）可直接参考本仓库 [client/lib/services](file:///c:/Code/AppStore/client/lib/services)。
 
-## 4. 常见坑
+## 4. 安装上报（可选）
+
+下载接口无法判断首次安装还是更新，也拿不到设备型号。需要这类统计时，在安装/更新完成后调用上报接口；不接入时后台仍统计 PV、下载与渠道。
+
+### 4.1 请求规范
+
+`POST {base}/api/analytics/install`，`Content-Type: application/json`
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| packageName | string | 是 | 应用包名，必须与后台记录一致，否则返回 404 |
+| versionCode | integer | 是 | 安装或更新后的版本号 |
+| installType | string | 是 | `install` 首次安装，`update` 覆盖更新 |
+| deviceModel | string | 否 | 设备型号，如 `Pixel 8` |
+| osVersion | string | 否 | 系统版本，如 `Android 15` |
+| channel | string | 否 | 分发渠道，与页面 `?from=` 对应 |
+
+成功返回 `{"ok":true}`；参数缺失或非法返回 400；包名不存在返回 404。同一设备同一版本 5 分钟内重复上报会自动去重。
+
+调用时机：安装或更新完成后的首次启动调用一次，不要每次启动都上报。`installType` 在安装前判断：目标包已存在则为 `update`，否则为 `install`。
+
+### 4.2 Kotlin 示例
+
+```kotlin
+/**
+ * 安装/更新完成后首次启动调用。
+ * @param versionCode 当前已安装版本号
+ * @param isUpdate 安装前目标包是否已存在
+ */
+fun reportInstall(context: Context, versionCode: Int, isUpdate: Boolean) {
+    val payload = JSONObject().apply {
+        put("packageName", context.packageName)
+        put("versionCode", versionCode)
+        put("installType", if (isUpdate) "update" else "install")
+        put("deviceModel", Build.MODEL)
+        put("osVersion", "Android ${Build.VERSION.RELEASE}")
+    }
+    OkHttpClient().newCall(
+        Request.Builder()
+            .url("$BASE_URL/api/analytics/install")
+            .post(payload.toString().toRequestBody("application/json".toMediaType()))
+            .build()
+    ).enqueue(object : Callback {
+        override fun onFailure(call: Call, e: IOException) = Unit
+        override fun onResponse(call: Call, response: Response) {
+            response.close()
+        }
+    })
+}
+```
+
+### 4.3 Flutter 示例
+
+```dart
+/// 安装/更新完成后首次启动调用；deviceModel 可取自 device_info_plus。
+Future<void> reportInstall({
+  required String baseUrl,
+  required int versionCode,
+  required bool isUpdate,
+  required String deviceModel,
+}) async {
+  final info = await PackageInfo.fromPlatform();
+  await http.post(
+    Uri.parse('$baseUrl/api/analytics/install'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({
+      'packageName': info.packageName,
+      'versionCode': versionCode,
+      'installType': isUpdate ? 'update' : 'install',
+      'deviceModel': deviceModel,
+      'osVersion': 'Android ${Platform.version}',
+    }),
+  );
+}
+```
+
+## 5. 常见坑
 
 | 问题 | 处理 |
 |---|---|

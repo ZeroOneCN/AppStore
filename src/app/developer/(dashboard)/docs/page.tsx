@@ -10,7 +10,7 @@ export default function DeveloperDocsPage() {
     <div className="w-full">
       <PageHeader
         title="接入文档"
-        description="在应用内调用更新检查接口，支持 cURL、Java、Kotlin、Flutter、React Native、Node.js、Python、Go 与 C# 示例"
+        description="在应用内调用更新检查接口，支持 cURL、Java、Kotlin、Flutter、React Native、Node.js、Python、Go 与 C# 示例；文末附带可选的安装上报规范"
       />
       <DocsEmbedded />
     </div>

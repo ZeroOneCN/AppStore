@@ -636,3 +636,13 @@ HTTP 冒烟实测明细（种子数据：`smoke-pack`，真实 APK 4026 版，�
 | 修复 | 通过 | `package.json` 增加 `prebuild: prisma generate`，`npm run build` 会自动重新生成客户端；README 运行说明同步更新 |
 | 验证 | 通过 | 重新执行 `npm run build`，prebuild 输出 `Generated Prisma Client` 后 TypeScript 与静态生成全部通过（51 个页面） |
 | 部署 | 说明 | 云端拉取代码后直接执行 `npx prisma migrate deploy && npm run build`，无需再单独 generate |
+
+### 安装上报文档补全（B43）
+
+| 项目 | 结果 | 证据 |
+|---|---|---|
+| 字段规范 | 通过 | 公开 `/docs` 的「安装上报（可选）」新增字段表：packageName、versionCode、installType、deviceModel、osVersion、channel 的类型、必填与说明 |
+| 调用时机 | 通过 | 明确安装/更新完成后首次启动调用一次；installType 由安装前目标包是否存在决定；5 分钟同设备同版本去重 |
+| 客户端示例 | 通过 | `docs/AppStore/INTEGRATION_AppStore.md` 新增第 4 章，包含 Kotlin（OkHttp）与 Flutter（http）示例，原「常见坑」顺延为第 5 章 |
+| 文档入口 | 通过 | 开发者后台「接入文档」内嵌公开文档，说明同步提及安装上报；OpenAPI 已有 `/api/analytics/install` 定义 |
+| 质量 | 通过 | `typecheck`、`lint`、`build` 通过；本地 `/docs` 渲染字段表与示例说明 |
