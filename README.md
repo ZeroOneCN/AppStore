@@ -86,6 +86,7 @@
 | B39 | 开发者展示改版：首页卡片与详情页去掉 @用户名 和重复的角色徽标，改为「小头像/官方盾牌 + 名称」的低干扰样式，官方应用统一品牌色盾牌；侧栏开发者行仅保留名称 | 已完成 |
 | B40 | 数据统计与分析：新增 AnalyticsEvent 事件表与页面浏览/下载/安装上报采集；管理员与开发者统计页提供 PV、UV、下载、首次安装/更新、渠道、设备/系统分布、7/30/90 天趋势与应用排行；安装上报由开发者按需接入 | 已完成 |
 | B41 | 统计范围扩展与更新日志：统计支持 1 年预设与自定义起止日期（长区间自动按周/月汇总）；后台新增「更新日志」页，补齐项目上线至今的全部功能、优化、修复与客户端记录 | 已完成 |
+| B42 | 构建修复：`build` 前自动执行 `prisma generate`（prebuild），解决执行 `migrate deploy` 后未重新生成 Prisma 客户端导致的 `analyticsEvent` 类型缺失与构建失败 | 已完成 |
 
 ## 四、约定
 
@@ -96,10 +97,13 @@
 ## 五、运行与文档
 
 ```bash
-npm install && npx prisma generate
-npx prisma migrate deploy && npm run init-admin
-npm run dev
+npm install
+npx prisma migrate deploy
+npm run build   # prebuild 会自动执行 prisma generate
+npm start
 ```
+
+> 修改 `prisma/schema.prisma` 后，构建前需重新生成 Prisma 客户端；`npm run build` 已内置该步骤，无需手动执行。开发环境可执行 `npx prisma generate && npm run dev`。
 
 | 文档 | 用途 |
 |---|---|

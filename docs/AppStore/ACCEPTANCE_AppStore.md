@@ -627,3 +627,12 @@ HTTP 冒烟实测明细（种子数据：`smoke-pack`，真实 APK 4026 版，�
 | 更新日志内容 | 通过 | 从 B1 到 B41 全部纳入：工程骨架、公开接口、开发者体系、发布向导、同版本覆盖、私有应用、下载失效页、一行接入、统计与安装上报等 |
 | 质量 | 通过 | `typecheck`、`lint`、`test`（71/71）、`build` 通过；本地 `/admin/stats?days=365`、自定义区间与 `/admin/changelog` 均返回 200 |
 | 部署 | 说明 | 纯页面与查询参数调整，无新增数据库迁移 |
+
+### 构建修复：Prisma 客户端自动生成（B42）
+
+| 项目 | 结果 | 证据 |
+|---|---|---|
+| 问题 | 已定位 | 执行 `npx prisma migrate deploy` 后未运行 `prisma generate`，生成的客户端缺少 `AnalyticsEvent` 模型类型，`tsc` 报 `analyticsEvent` 不存在 |
+| 修复 | 通过 | `package.json` 增加 `prebuild: prisma generate`，`npm run build` 会自动重新生成客户端；README 运行说明同步更新 |
+| 验证 | 通过 | 重新执行 `npm run build`，prebuild 输出 `Generated Prisma Client` 后 TypeScript 与静态生成全部通过（51 个页面） |
+| 部署 | 说明 | 云端拉取代码后直接执行 `npx prisma migrate deploy && npm run build`，无需再单独 generate |
