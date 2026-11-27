@@ -177,11 +177,14 @@ describe("分析服务", () => {
       data: { type: "download", appId: app.id, path: "/download", visitorId: "v9" },
     });
 
+    // 统计范围按本地日期解析，这里同样使用本地日期，避免 UTC 与本地跨天导致用例偶发失败
+    const formatLocalDate = (date: Date) =>
+      `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
     const end = new Date();
     const start = new Date();
     start.setDate(start.getDate() - 364);
-    const startText = start.toISOString().slice(0, 10);
-    const endText = end.toISOString().slice(0, 10);
+    const startText = formatLocalDate(start);
+    const endText = formatLocalDate(end);
 
     const overview = await getAnalyticsOverview({ start: startText, end: endText });
     expect(overview.granularity).toBe("month");

@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
-import { AppCard } from "@/components/app-card";
+import { AppCard, AppIcon } from "@/components/app-card";
 import { PageViewTracker } from "@/components/analytics/page-view-tracker";
 import { CodeTabs } from "@/components/code-tabs";
 import { StatCard } from "@/components/stat-card";
 import { getRequestOrigin } from "@/server/http/base-url";
-import { listPublicApps } from "@/server/services/app.service";
+import { listPublicApps, type AppCardDto } from "@/server/services/app.service";
 import { getSiteSettings } from "@/server/services/settings.service";
 
 /** 平台能力列表 */
@@ -59,6 +59,85 @@ const STEPS = [
   },
 ];
 
+/** 首页展示的联系邮箱 */
+const CONTACT_EMAIL = "service@01iot.top";
+
+/**
+ * 精选大卡：首页前两位主推应用，展示更完整的简介与更新时间。
+ * @param props.app 应用卡片数据
+ * @returns 大尺寸卡片链接
+ */
+function FeaturedAppCard({ app }: { app: AppCardDto }) {
+  const author = app.developer ? app.developer.displayName || app.developer.username : "平台官方";
+  const updated = new Date(app.updatedAt);
+  const updatedLabel = `${updated.getMonth() + 1} 月 ${updated.getDate()} 日更新`;
+
+  return (
+    <Link
+      href={`/apps/${app.slug}`}
+      className="group relative flex h-full flex-col overflow-hidden rounded-[24px] border border-black/[0.06] bg-white/85 p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)] backdrop-blur-sm transition duration-300 hover:-translate-y-0.5 hover:border-brand/30 hover:shadow-[0_22px_48px_-30px_rgba(30,81,238,0.65)] sm:p-6 dark:border-white/10 dark:bg-[#1c1c1e]/85 dark:hover:border-brand/40"
+    >
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -top-24 -right-16 h-56 w-56 rounded-full bg-brand/10 blur-3xl transition duration-300 group-hover:bg-brand/20"
+      />
+      <div className="relative flex items-start gap-4">
+        <AppIcon name={app.name} iconUrl={app.iconUrl} size={64} />
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="truncate text-[18px] font-semibold tracking-tight">{app.name}</h3>
+            {app.pinned ? (
+              <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
+                置顶
+              </span>
+            ) : null}
+          </div>
+          <p className="mt-1 truncate text-[12px] text-neutral-500 dark:text-neutral-400">
+            {author} · {updatedLabel}
+          </p>
+          <p className="mt-2 line-clamp-2 min-h-[48px] text-[13px] leading-6 text-neutral-500 dark:text-neutral-400">
+            {app.summary}
+          </p>
+        </div>
+      </div>
+
+      <div className="relative mt-4 flex flex-wrap gap-1.5">
+        <span
+          className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
+            app.type === "ANDROID"
+              ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"
+              : "bg-sky-50 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300"
+          }`}
+        >
+          {app.type === "ANDROID" ? "Android" : "网页"}
+        </span>
+        <span className="rounded-full bg-black/[0.04] px-2 py-0.5 text-[11px] text-neutral-600 dark:bg-white/[0.08] dark:text-neutral-300">
+          {app.category}
+        </span>
+        {app.tags.slice(0, 2).map((tag) => (
+          <span
+            key={tag}
+            className="rounded-full border border-black/[0.06] px-2 py-0.5 text-[11px] text-neutral-500 dark:border-white/10 dark:text-neutral-400"
+          >
+            {tag}
+          </span>
+        ))}
+      </div>
+
+      <div className="relative mt-auto flex items-center justify-between gap-2 border-t border-black/[0.05] pt-3 text-[11px] text-neutral-500 dark:border-white/[0.08] dark:text-neutral-400">
+        <span className="truncate tabular-nums">
+          {app.currentVersion
+            ? `v${app.currentVersion.versionName}`
+            : app.type === "WEB"
+              ? "网页作品"
+              : "尚未发布"}
+        </span>
+        <span className="shrink-0 tabular-nums">{app.downloadCount} 次下载</span>
+      </div>
+    </Link>
+  );
+}
+
 /**
  * 首页数据区：读取公开应用并渲染宣传内容。
  * @returns 首页主体
@@ -68,12 +147,23 @@ async function HomeContent() {
   const apps = await listPublicApps({ sort: "recent" });
 
   const featured = apps.slice(0, 6);
+  const featuredPrimary = featured.slice(0, 2);
+  const featuredRest = featured.slice(2);
   const androidCount = apps.filter((app) => app.type === "ANDROID").length;
   const webCount = apps.length - androidCount;
   const downloads = apps.reduce((sum, app) => sum + app.downloadCount, 0);
   const { siteName } = await getSiteSettings();
   const origin = await getRequestOrigin();
   const checkEndpoint = `${origin}/api/update/check`;
+  // 商店自身客户端：优先按包名匹配，兜底按访问标识匹配，用于首屏下载入口与在线调试示例
+  const clientApp =
+    apps.find((app) => app.packageName === "com.appstore.appstore_client") ??
+    apps.find((app) => app.slug === "appstore-client") ??
+    null;
+  const tryApp = clientApp ?? apps.find((app) => app.packageName) ?? null;
+  const tryUrl = tryApp?.packageName
+    ? `${checkEndpoint}?packageName=${encodeURIComponent(tryApp.packageName)}&versionCode=1`
+    : null;
 
   /** 一行接入示例：复制后替换包名与版本号即可使用 */
   const integrationSnippets = [
@@ -95,6 +185,17 @@ async function HomeContent() {
       {/* Hero：大标题、行动按钮与右侧接口预览 */}
       <section className="page-shell relative overflow-hidden pt-10 pb-8 sm:pt-16 sm:pb-12">
         <div className="hero-glow -top-24 left-1/2 h-72 w-[520px] -translate-x-1/2" />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 opacity-70"
+          style={{
+            backgroundImage:
+              "linear-gradient(to right, rgba(15,23,42,0.045) 1px, transparent 1px), linear-gradient(to bottom, rgba(15,23,42,0.045) 1px, transparent 1px)",
+            backgroundSize: "32px 32px",
+            maskImage: "radial-gradient(ellipse 62% 58% at 50% 38%, black, transparent)",
+            WebkitMaskImage: "radial-gradient(ellipse 62% 58% at 50% 38%, black, transparent)",
+          }}
+        />
 
         <div className="relative grid items-center gap-10 lg:grid-cols-[1.05fr_0.95fr]">
           <div className="min-w-0">
@@ -113,25 +214,66 @@ async function HomeContent() {
             </p>
 
             <div className="btn-group mt-6 max-w-md">
-              <Link href="/apps" className="btn-primary py-3 text-[14px]">
-                浏览应用
-              </Link>
-              <Link href="/docs" className="btn-secondary py-3 text-[14px]">
-                查看接入文档
-              </Link>
+              {clientApp ? (
+                <>
+                  <Link href={`/apps/${clientApp.slug}`} className="btn-primary py-3 text-[14px]">
+                    下载 Android 客户端
+                  </Link>
+                  <Link href="/apps" className="btn-secondary py-3 text-[14px]">
+                    浏览全部应用
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link href="/apps" className="btn-primary py-3 text-[14px]">
+                    浏览应用
+                  </Link>
+                  <Link href="/docs" className="btn-secondary py-3 text-[14px]">
+                    查看接入文档
+                  </Link>
+                </>
+              )}
+            </div>
+            <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-neutral-500 dark:text-neutral-400">
+              {clientApp?.currentVersion ? (
+                <span className="tabular-nums">
+                  客户端 v{clientApp.currentVersion.versionName}（{clientApp.currentVersion.versionCode}）
+                </span>
+              ) : null}
+              {clientApp ? (
+                <Link href="/docs" className="font-medium text-brand transition hover:text-brand-deep">
+                  查看接入文档 →
+                </Link>
+              ) : null}
             </div>
 
-            <dl className="mt-8 grid max-w-xl grid-cols-2 gap-2.5 sm:grid-cols-4">
-              <StatCard label="应用" value={apps.length} tone="brand" />
-              <StatCard label="累计下载" value={downloads} />
-              <StatCard label="Android" value={androidCount} />
-              <StatCard label="网页作品" value={webCount} />
+            <dl className="mt-8 flex max-w-xl gap-2 overflow-x-auto pb-1 sm:grid sm:grid-cols-4 sm:overflow-visible sm:pb-0">
+              <div className="min-w-[112px] flex-1 sm:min-w-0">
+                <StatCard label="应用" value={apps.length} tone="brand" />
+              </div>
+              <div className="min-w-[112px] flex-1 sm:min-w-0">
+                <StatCard label="累计下载" value={downloads} />
+              </div>
+              <div className="min-w-[112px] flex-1 sm:min-w-0">
+                <StatCard label="Android" value={androidCount} />
+              </div>
+              <div className="min-w-[112px] flex-1 sm:min-w-0">
+                <StatCard label="网页作品" value={webCount} />
+              </div>
             </dl>
           </div>
 
           <div className="relative min-w-0">
             <div className="surface p-5 sm:p-6" style={{ boxShadow: "var(--shadow-float)" }}>
-              <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5 border-b border-black/[0.06] pb-3 dark:border-white/10">
+                <span className="size-2.5 rounded-full bg-[#ff5f57]" />
+                <span className="size-2.5 rounded-full bg-[#febc2e]" />
+                <span className="size-2.5 rounded-full bg-[#28c840]" />
+                <span className="ml-2 truncate font-mono text-[10px] text-neutral-400">
+                  GET /api/update/check
+                </span>
+              </div>
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
                 <p className="text-[13px] font-semibold">接入更新检查，一行就够</p>
                 <div className="flex items-center gap-1.5">
                   <span className="chip">无需 SDK</span>
@@ -146,8 +288,9 @@ async function HomeContent() {
                 <CodeTabs tabs={integrationSnippets} />
               </div>
 
-              <p className="mt-4 text-[11px] text-neutral-400">返回示例</p>
-              <pre className="code-block mt-1.5 text-[11px]">{`{
+              <div className="hidden sm:block">
+                <p className="mt-4 text-[11px] text-neutral-400">返回示例</p>
+                <pre className="code-block mt-1.5 text-[11px]">{`{
   "hasUpdate": true,
   "forceUpdate": false,
   "latest": {
@@ -156,11 +299,24 @@ async function HomeContent() {
     "downloadUrl": "/api/download/xxx?exp=...&sig=..."
   }
 }`}</pre>
+              </div>
               <div className="mt-4 flex items-center justify-between gap-3 text-[11px] text-neutral-500 dark:text-neutral-400">
-                <span>下载链接 10 分钟有效</span>
-                <Link href="/docs" className="shrink-0 font-medium text-brand transition hover:text-brand-deep">
-                  完整接入文档 →
-                </Link>
+                <span className="hidden sm:inline">下载链接 10 分钟有效</span>
+                <div className="flex items-center gap-3">
+                  {tryUrl ? (
+                    <a
+                      href={tryUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="font-medium text-brand transition hover:text-brand-deep"
+                    >
+                      在线试试 →
+                    </a>
+                  ) : null}
+                  <Link href="/docs" className="shrink-0 font-medium text-brand transition hover:text-brand-deep">
+                    完整文档 →
+                  </Link>
+                </div>
               </div>
             </div>
 
@@ -192,11 +348,22 @@ async function HomeContent() {
             </Link>
           </div>
         ) : (
-          <div className="mt-5 grid auto-rows-fr gap-4 [grid-template-columns:repeat(auto-fill,minmax(280px,1fr))]">
-            {featured.map((app) => (
-              <AppCard key={app.id} app={app} />
-            ))}
-          </div>
+          <>
+            <div
+              className={`mt-5 grid gap-4 ${featuredPrimary.length > 1 ? "md:grid-cols-2" : ""}`}
+            >
+              {featuredPrimary.map((app) => (
+                <FeaturedAppCard key={app.id} app={app} />
+              ))}
+            </div>
+            {featuredRest.length > 0 ? (
+              <div className="mt-4 grid auto-rows-fr gap-4 [grid-template-columns:repeat(auto-fill,minmax(280px,1fr))]">
+                {featuredRest.map((app) => (
+                  <AppCard key={app.id} app={app} />
+                ))}
+              </div>
+            ) : null}
+          </>
         )}
       </section>
 
@@ -266,6 +433,49 @@ async function HomeContent() {
         </div>
       </section>
 
+      {/* 联系我们 */}
+      <section className="page-shell mt-16">
+        <div className="surface grid gap-6 p-6 sm:p-8 lg:grid-cols-[1fr_auto] lg:items-center">
+          <div className="flex items-start gap-4">
+            <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-brand/10 text-brand">
+              <svg
+                viewBox="0 0 24 24"
+                className="size-5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={1.7}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden
+              >
+                <rect x="3" y="5" width="18" height="14" rx="2.5" />
+                <path d="m4 7 8 5 8-5" />
+              </svg>
+            </span>
+            <div className="min-w-0">
+              <p className="text-[11px] font-medium tracking-[0.18em] text-brand uppercase">联系我们</p>
+              <h2 className="mt-1.5 text-[20px] font-semibold tracking-[-0.01em] sm:text-[22px]">
+                有问题、建议或合作？
+              </h2>
+              <p className="mt-2 max-w-xl text-[13px] leading-6 text-neutral-500 dark:text-neutral-400">
+                应用收录、账号申请、接入问题或功能建议，都可以直接发邮件，我们会尽快回复。
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center lg:flex-col lg:items-end">
+            <a href={`mailto:${CONTACT_EMAIL}`} className="btn-primary w-full py-3 text-[14px] sm:w-auto">
+              发邮件给我们
+            </a>
+            <a
+              href={`mailto:${CONTACT_EMAIL}`}
+              className="text-center font-mono text-[12px] text-neutral-500 transition hover:text-brand sm:text-left dark:text-neutral-400"
+            >
+              {CONTACT_EMAIL}
+            </a>
+          </div>
+        </div>
+      </section>
+
       {/* 底部行动区 */}
       <section className="page-shell mt-16">
         <div className="relative overflow-hidden rounded-[28px] bg-[#0b0d12] px-6 py-12 text-center text-white sm:px-10">
@@ -276,6 +486,9 @@ async function HomeContent() {
             </h2>
             <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-neutral-300">
               管理员与开发者使用同一登录入口，登录后按账号角色进入对应控制台。
+            </p>
+            <p className="mx-auto mt-2 text-[12px] text-neutral-400">
+              自托管部署 · 应用与数据都存放在自己的服务器
             </p>
             <div className="btn-group mx-auto mt-7 max-w-md">
               <Link
