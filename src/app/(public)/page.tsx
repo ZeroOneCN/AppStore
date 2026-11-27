@@ -2,6 +2,7 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { AppCard } from "@/components/app-card";
+import { CodeTabs } from "@/components/code-tabs";
 import { StatCard } from "@/components/stat-card";
 import { getRequestOrigin } from "@/server/http/base-url";
 import { listPublicApps } from "@/server/services/app.service";
@@ -73,29 +74,43 @@ async function HomeContent() {
   const origin = await getRequestOrigin();
   const checkEndpoint = `${origin}/api/update/check`;
 
+  /** 一行接入示例：复制后替换包名与版本号即可使用 */
+  const integrationSnippets = [
+    {
+      id: "js",
+      label: "JavaScript",
+      code: `fetch("${checkEndpoint}?packageName=com.example.app&versionCode=12").then((r) => r.json()).then(console.log);`,
+    },
+    {
+      id: "curl",
+      label: "cURL",
+      code: `curl "${checkEndpoint}?packageName=com.example.app&versionCode=12"`,
+    },
+  ];
+
   return (
     <div className="flex flex-1 flex-col">
       {/* Hero：大标题、行动按钮与右侧接口预览 */}
-      <section className="page-shell relative overflow-hidden pt-14 pb-10 sm:pt-20">
+      <section className="page-shell relative overflow-hidden pt-10 pb-8 sm:pt-16 sm:pb-12">
         <div className="hero-glow -top-24 left-1/2 h-72 w-[520px] -translate-x-1/2" />
 
         <div className="relative grid items-center gap-10 lg:grid-cols-[1.05fr_0.95fr]">
           <div className="min-w-0">
             <span className="chip">
               <span className="h-1.5 w-1.5 rounded-full bg-brand" />
-              应用分发中心
+              应用分发中心 · 已收录 {apps.length} 个应用
             </span>
-            <h1 className="mt-5 text-[40px] leading-[1.06] font-semibold tracking-[-0.035em] sm:text-[56px]">
+            <h1 className="mt-4 text-[36px] leading-[1.06] font-semibold tracking-[-0.035em] sm:text-[54px]">
               把应用分发
               <br />
               <span className="gradient-text">做成自己的商店</span>
             </h1>
-            <p className="mt-5 max-w-xl text-[15px] leading-7 text-neutral-600 dark:text-neutral-300">
+            <p className="mt-4 max-w-xl text-[15px] leading-7 text-neutral-600 dark:text-neutral-300">
               {siteName} 托管 Android 安装包与网页作品，提供版本管理、历史回滚、签名下载与客户端更新检查。
               数据存储在自建服务器上，无需依赖第三方应用市场。
             </p>
 
-            <div className="btn-group mt-7 max-w-md">
+            <div className="btn-group mt-6 max-w-md">
               <Link href="/apps" className="btn-primary py-3 text-[14px]">
                 浏览应用
               </Link>
@@ -104,7 +119,7 @@ async function HomeContent() {
               </Link>
             </div>
 
-            <dl className="mt-9 grid max-w-xl grid-cols-2 gap-2.5 sm:grid-cols-4">
+            <dl className="mt-8 grid max-w-xl grid-cols-2 gap-2.5 sm:grid-cols-4">
               <StatCard label="应用" value={apps.length} tone="brand" />
               <StatCard label="累计下载" value={downloads} />
               <StatCard label="Android" value={androidCount} />
@@ -114,28 +129,35 @@ async function HomeContent() {
 
           <div className="relative min-w-0">
             <div className="surface p-5 sm:p-6" style={{ boxShadow: "var(--shadow-float)" }}>
-              <div className="flex items-center justify-between">
-                <p className="text-[13px] font-semibold">客户端检查更新</p>
-                <span className="chip">GET</span>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-[13px] font-semibold">接入更新检查，一行就够</p>
+                <div className="flex items-center gap-1.5">
+                  <span className="chip">无需 SDK</span>
+                  <span className="chip">GET</span>
+                </div>
               </div>
-              <p className="mt-3 break-all font-mono text-[11px] leading-5 text-neutral-500 dark:text-neutral-400">
-                {checkEndpoint}?packageName=com.example.app&amp;versionCode=12
+              <p className="mt-2 text-xs leading-5 text-neutral-500 dark:text-neutral-400">
+                替换包名与版本号，复制到项目里即可拿到更新信息。
               </p>
-              <pre className="code-block mt-4">{`{
+
+              <div className="mt-3">
+                <CodeTabs tabs={integrationSnippets} />
+              </div>
+
+              <p className="mt-4 text-[11px] text-neutral-400">返回示例</p>
+              <pre className="code-block mt-1.5 text-[11px]">{`{
   "hasUpdate": true,
   "forceUpdate": false,
   "latest": {
     "versionName": "1.2.0",
     "versionCode": 12,
-    "fileSize": 52428800,
-    "sha256": "9f2c...e1",
     "downloadUrl": "/api/download/xxx?exp=...&sig=..."
   }
 }`}</pre>
-              <div className="mt-4 flex items-center justify-between text-[11px] text-neutral-500 dark:text-neutral-400">
+              <div className="mt-4 flex items-center justify-between gap-3 text-[11px] text-neutral-500 dark:text-neutral-400">
                 <span>下载链接 10 分钟有效</span>
-                <Link href="/docs" className="font-medium text-brand transition hover:text-brand-deep">
-                  接入指引 →
+                <Link href="/docs" className="shrink-0 font-medium text-brand transition hover:text-brand-deep">
+                  完整接入文档 →
                 </Link>
               </div>
             </div>
@@ -150,7 +172,7 @@ async function HomeContent() {
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 className="section-title">精选应用</h2>
-            <p className="page-desc">置顶与最近更新的作品，点击查看详情与历史版本</p>
+            <p className="page-desc">共 {apps.length} 个作品 · 置顶与最近更新优先，点击查看详情与历史版本</p>
           </div>
           <Link href="/apps" className="text-sm font-medium text-brand transition hover:text-brand-deep">
             查看全部 →
