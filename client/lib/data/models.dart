@@ -46,6 +46,38 @@ class VersionSummary {
   final String? publishedAt;
 }
 
+/// 应用归属开发者。
+class AppDeveloper {
+  /// 创建开发者信息。
+  const AppDeveloper({
+    required this.id,
+    required this.username,
+    required this.displayName,
+  });
+
+  /// 从接口 JSON 解析开发者信息。
+  factory AppDeveloper.fromJson(Map<String, dynamic> json) {
+    return AppDeveloper(
+      id: json['id'] as String? ?? '',
+      username: json['username'] as String? ?? '',
+      displayName: json['displayName'] as String? ?? '',
+    );
+  }
+
+  /// 开发者 ID。
+  final String id;
+
+  /// 登录用户名。
+  final String username;
+
+  /// 显示名称，可为空。
+  final String displayName;
+
+  /// 展示用名称：优先显示名称加用户名，未填写显示名称时仅展示用户名。
+  String get label =>
+      displayName.isEmpty ? '@$username' : '$displayName @$username';
+}
+
 /// 应用卡片数据。
 class AppSummary {
   /// 创建应用卡片。
@@ -59,6 +91,7 @@ class AppSummary {
     required this.tags,
     required this.iconUrl,
     this.packageName,
+    this.developer,
     required this.pinned,
     required this.downloadCount,
     required this.updatedAt,
@@ -68,6 +101,7 @@ class AppSummary {
   /// 从接口 JSON 解析应用卡片。
   factory AppSummary.fromJson(Map<String, dynamic> json) {
     final version = json['currentVersion'];
+    final developer = json['developer'];
     return AppSummary(
       id: json['id'] as String? ?? '',
       slug: json['slug'] as String? ?? '',
@@ -78,6 +112,9 @@ class AppSummary {
       tags: (json['tags'] as List?)?.whereType<String>().toList(growable: false) ?? const [],
       iconUrl: json['iconUrl'] as String?,
       packageName: json['packageName'] as String?,
+      developer: developer is Map<String, dynamic>
+          ? AppDeveloper.fromJson(developer)
+          : null,
       pinned: json['pinned'] as bool? ?? false,
       downloadCount: (json['downloadCount'] as num?)?.toInt() ?? 0,
       updatedAt: json['updatedAt'] as String?,
@@ -111,6 +148,9 @@ class AppSummary {
 
   /// Android 包名，用于更新检测；网页作品为 null。
   final String? packageName;
+
+  /// 归属开发者，未指派时为 null（平台官方）。
+  final AppDeveloper? developer;
 
   /// 是否置顶。
   final bool pinned;
