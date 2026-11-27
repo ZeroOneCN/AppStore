@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../../core/formatters.dart';
 import '../../data/models.dart';
 import 'app_icon.dart';
 
-/// 应用墙卡片：图标、名称、简介、版本与下载量。
+/// 应用墙卡片：横向一行的应用条目，左侧图标，中部名称与简介，右侧查看入口。
 class AppWallCard extends StatelessWidget {
   /// 创建应用墙卡片。
   const AppWallCard({super.key, required this.app, required this.onTap});
@@ -20,6 +21,13 @@ class AppWallCard extends StatelessWidget {
     final scheme = theme.colorScheme;
     final version = app.currentVersion;
     final radius = BorderRadius.circular(16);
+
+    // 版本与包大小合并为一段辅助信息，缺失时省略避免出现空白占位
+    final metaParts = <String>[
+      if (version != null) 'v${version.versionName}',
+      if (version != null && version.fileSize > 0)
+        formatBytes(version.fileSize),
+    ];
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -45,80 +53,99 @@ class AppWallCard extends StatelessWidget {
           borderRadius: radius,
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+            child: Row(
               children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    AppIcon(name: app.name, iconUrl: app.iconUrl, size: 44),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                AppIcon(name: app.name, iconUrl: app.iconUrl, size: 54),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
                         children: [
-                          Row(
-                            children: [
-                              Flexible(
-                                child: Text(
-                                  app.name,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: theme.textTheme.titleSmall?.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                    letterSpacing: -0.1,
-                                  ),
-                                ),
+                          Flexible(
+                            child: Text(
+                              app.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: -0.1,
+                                fontSize: 15,
                               ),
-                              if (app.pinned) ...[
-                                const SizedBox(width: 4),
-                                Icon(
-                                  Icons.push_pin_rounded,
-                                  size: 13,
-                                  color: scheme.tertiary,
-                                ),
-                              ],
-                            ],
+                            ),
                           ),
-                          const SizedBox(height: 3),
+                          if (app.pinned) ...[
+                            const SizedBox(width: 4),
+                            Icon(
+                              Icons.push_pin_rounded,
+                              size: 13,
+                              color: scheme.tertiary,
+                            ),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        app.summary.isEmpty ? '暂无简介' : app.summary,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                          fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(height: 7),
+                      Row(
+                        children: [
+                          _TypeBadge(isAndroid: app.isAndroid),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              metaParts.isEmpty
+                                  ? '未发布'
+                                  : metaParts.join(' · '),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: scheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
                           Text(
-                            app.summary,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.bodySmall?.copyWith(
+                            '${app.downloadCount} 次下载',
+                            maxLines: 1,
+                            style: theme.textTheme.labelSmall?.copyWith(
                               color: scheme.onSurfaceVariant,
-                              height: 1.3,
-                              fontSize: 11.5,
                             ),
                           ),
                         ],
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    _TypeBadge(isAndroid: app.isAndroid),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        version != null ? 'v${version.versionName}' : '未发布',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: scheme.onSurfaceVariant,
-                        ),
-                      ),
+                const SizedBox(width: 10),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: scheme.primary.withValues(alpha: 0.10),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    '查看',
+                    maxLines: 1,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: scheme.primary,
                     ),
-                    Text(
-                      '${app.downloadCount} 次下载',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: scheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ],
             ),
@@ -146,6 +173,7 @@ class _TypeBadge extends StatelessWidget {
       ),
       child: Text(
         isAndroid ? 'Android' : '网页',
+        maxLines: 1,
         style: TextStyle(
           fontSize: 10,
           color: color,

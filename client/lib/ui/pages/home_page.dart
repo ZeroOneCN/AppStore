@@ -11,7 +11,7 @@ import '../widgets/brand_mark.dart';
 import '../widgets/state_views.dart';
 import 'app_detail_page.dart';
 
-/// 应用墙首页：搜索、类型/分类筛选、排序与自适应网格。
+/// 应用墙首页：搜索、类型/分类筛选、排序与单列应用列表。
 class HomePage extends StatefulWidget {
   /// 创建首页。
   const HomePage({super.key});
@@ -242,36 +242,21 @@ class _HomePageState extends State<HomePage> {
 
     return RefreshIndicator(
       onRefresh: _load,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final columns = (constraints.maxWidth ~/ 172).clamp(2, 5);
-          final textScale = MediaQuery.textScalerOf(context)
-              .scale(1)
-              .clamp(1.0, 1.6);
-          final extent = 118.0 * textScale;
-
-          return GridView.builder(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: columns,
-              mainAxisSpacing: 10,
-              crossAxisSpacing: 10,
-              mainAxisExtent: extent,
-            ),
-            itemCount: _apps.length,
-            itemBuilder: (context, index) {
-              final app = _apps[index];
-              return AppWallCard(
-                app: app,
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) =>
-                          AppDetailPage(slug: app.slug, initialName: app.name),
-                    ),
-                  );
-                },
+      child: ListView.separated(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+        itemCount: _apps.length,
+        separatorBuilder: (context, index) => const SizedBox(height: 10),
+        itemBuilder: (context, index) {
+          final app = _apps[index];
+          return AppWallCard(
+            app: app,
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) =>
+                      AppDetailPage(slug: app.slug, initialName: app.name),
+                ),
               );
             },
           );
