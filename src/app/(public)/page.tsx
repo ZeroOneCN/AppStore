@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
-import { AppCard, AppIcon } from "@/components/app-card";
+import { AppCard } from "@/components/app-card";
 import { PageViewTracker } from "@/components/analytics/page-view-tracker";
 import { StatCard } from "@/components/stat-card";
 import { getRequestOrigin } from "@/server/http/base-url";
-import { listPublicApps, type AppCardDto } from "@/server/services/app.service";
+import { listPublicApps } from "@/server/services/app.service";
 import { getSiteSettings } from "@/server/services/settings.service";
 
 /** 平台能力列表 */
@@ -69,82 +69,6 @@ const STEPS = [
 const CONTACT_EMAIL = "service@01iot.top";
 
 /**
- * 精选大卡：首页前两位主推应用，展示更完整的简介与更新时间。
- * @param props.app 应用卡片数据
- * @returns 大尺寸卡片链接
- */
-function FeaturedAppCard({ app }: { app: AppCardDto }) {
-  const author = app.developer ? app.developer.displayName || app.developer.username : "平台官方";
-  const updated = new Date(app.updatedAt);
-  const updatedLabel = `${updated.getMonth() + 1} 月 ${updated.getDate()} 日更新`;
-
-  return (
-    <Link
-      href={`/apps/${app.slug}`}
-      className="group relative flex h-full flex-col overflow-hidden rounded-[24px] border border-black/[0.06] bg-white/85 p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)] backdrop-blur-sm transition duration-300 hover:-translate-y-0.5 hover:border-brand/30 hover:shadow-[0_22px_48px_-30px_rgba(30,81,238,0.65)] sm:p-6 dark:border-white/10 dark:bg-[#1c1c1e]/85 dark:hover:border-brand/40"
-    >
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -top-24 -right-16 h-56 w-56 rounded-full bg-brand/10 blur-3xl transition duration-300 group-hover:bg-brand/20"
-      />
-      <div className="relative flex items-start gap-4">
-        <AppIcon name={app.name} iconUrl={app.iconUrl} size={64} />
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <h3 className="truncate text-[18px] font-semibold tracking-tight">{app.name}</h3>
-            {app.pinned ? (
-              <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
-                置顶
-              </span>
-            ) : null}
-          </div>
-          <p className="mt-1 truncate text-[12px] text-neutral-500 dark:text-neutral-400">
-            {author} · {updatedLabel}
-          </p>
-          <p className="mt-2 line-clamp-2 min-h-[48px] text-[13px] leading-6 text-neutral-500 dark:text-neutral-400">
-            {app.summary}
-          </p>
-        </div>
-      </div>
-
-      <div className="relative mt-4 flex flex-wrap gap-1.5">
-        <span
-          className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
-            app.type === "ANDROID"
-              ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"
-              : "bg-sky-50 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300"
-          }`}
-        >
-          {app.type === "ANDROID" ? "Android" : "网页"}
-        </span>
-        <span className="rounded-full bg-black/[0.04] px-2 py-0.5 text-[11px] text-neutral-600 dark:bg-white/[0.08] dark:text-neutral-300">
-          {app.category}
-        </span>
-        {app.tags.slice(0, 2).map((tag) => (
-          <span
-            key={tag}
-            className="rounded-full border border-black/[0.06] px-2 py-0.5 text-[11px] text-neutral-500 dark:border-white/10 dark:text-neutral-400"
-          >
-            {tag}
-          </span>
-        ))}
-      </div>
-
-      <div className="relative mt-auto flex items-center justify-between gap-2 border-t border-black/[0.05] pt-3 text-[11px] text-neutral-500 dark:border-white/[0.08] dark:text-neutral-400">
-        <span className="truncate tabular-nums">
-          {app.currentVersion
-            ? `v${app.currentVersion.versionName}`
-            : app.type === "WEB"
-              ? "网页作品"
-              : "尚未发布"}
-        </span>
-        <span className="shrink-0 tabular-nums">{app.downloadCount} 次下载</span>
-      </div>
-    </Link>
-  );
-}
-
-/**
  * 首页数据区：读取公开应用并渲染宣传内容。
  * @returns 首页主体
  */
@@ -153,8 +77,6 @@ async function HomeContent() {
   const apps = await listPublicApps({ sort: "recent" });
 
   const featured = apps.slice(0, 6);
-  const featuredPrimary = featured.slice(0, 2);
-  const featuredRest = featured.slice(2);
   const androidCount = apps.filter((app) => app.type === "ANDROID").length;
   const webCount = apps.length - androidCount;
   const downloads = apps.reduce((sum, app) => sum + app.downloadCount, 0);
@@ -315,12 +237,14 @@ async function HomeContent() {
         </div>
       </section>
 
-      {/* 精选应用 */}
+      {/* 最近发布 */}
       <section className="page-shell mt-6">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h2 className="section-title">精选应用</h2>
-            <p className="page-desc">共 {apps.length} 个作品 · 置顶与最近更新优先，点击查看详情与历史版本</p>
+            <h2 className="section-title">最近发布</h2>
+            <p className="page-desc">
+              共 {apps.length} 个作品 · 按新版本发布时间排序，编辑资料不会改变顺序
+            </p>
           </div>
           <Link href="/apps" className="text-sm font-medium text-brand transition hover:text-brand-deep">
             查看全部 →
@@ -338,22 +262,11 @@ async function HomeContent() {
             </Link>
           </div>
         ) : (
-          <>
-            <div
-              className={`mt-5 grid gap-4 ${featuredPrimary.length > 1 ? "md:grid-cols-2" : ""}`}
-            >
-              {featuredPrimary.map((app) => (
-                <FeaturedAppCard key={app.id} app={app} />
-              ))}
-            </div>
-            {featuredRest.length > 0 ? (
-              <div className="mt-4 grid auto-rows-fr gap-4 [grid-template-columns:repeat(auto-fill,minmax(280px,1fr))]">
-                {featuredRest.map((app) => (
-                  <AppCard key={app.id} app={app} />
-                ))}
-              </div>
-            ) : null}
-          </>
+          <div className="mt-5 grid auto-rows-fr gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {featured.map((app) => (
+              <AppCard key={app.id} app={app} showReleaseDate />
+            ))}
+          </div>
         )}
       </section>
 

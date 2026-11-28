@@ -5,7 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 /** 排序选项 */
 const SORT_OPTIONS = [
-  { value: "recent", label: "最近更新" },
+  { value: "recent", label: "最近发布" },
   { value: "name", label: "按名称" },
   { value: "downloads", label: "下载最多" },
 ] as const;

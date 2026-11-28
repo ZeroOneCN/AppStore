@@ -52,11 +52,22 @@ const TYPE_LABEL: Record<AppCardDto["type"], string> = {
 };
 
 /**
+ * 将版本发布时间格式化为月/日。
+ * @param value ISO 时间字符串
+ * @returns 形如 11/27 的短日期
+ */
+function formatShortDate(value: string): string {
+  const date = new Date(value);
+  return `${date.getMonth() + 1}/${date.getDate()}`;
+}
+
+/**
  * 应用卡片，用于应用墙网格。
  * @param props.app 应用卡片数据
+ * @param props.showReleaseDate 是否展示版本发布时间，首页用于说明排序依据
  * @returns 卡片链接
  */
-export function AppCard({ app }: { app: AppCardDto }) {
+export function AppCard({ app, showReleaseDate = false }: { app: AppCardDto; showReleaseDate?: boolean }) {
   return (
     <Link
       href={`/apps/${app.slug}`}
@@ -137,9 +148,11 @@ export function AppCard({ app }: { app: AppCardDto }) {
       </div>
 
       <div className="mt-auto flex items-center justify-between gap-2 border-t border-black/[0.05] pt-3 text-[11px] text-neutral-500 dark:border-white/[0.08] dark:text-neutral-400">
-        <span className="truncate">
+        <span className="truncate tabular-nums">
           {app.currentVersion
-            ? `v${app.currentVersion.versionName}`
+            ? `v${app.currentVersion.versionName}${
+                showReleaseDate ? ` · ${formatShortDate(app.currentVersion.publishedAt)} 发布` : ""
+              }`
             : app.type === "WEB"
               ? "网页作品"
               : "尚未发布"}

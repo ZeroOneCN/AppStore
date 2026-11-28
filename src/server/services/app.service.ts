@@ -214,12 +214,13 @@ export async function listPublicApps(filters: AppListFilters): Promise<AppCardDt
   if (filters.tag) where.tags = { contains: `"${filters.tag}"` };
 
   const sort = filters.sort ?? "recent";
+  // 最近更新只按版本发布时间排序，编辑应用资料（日志、简介等）不会改变顺序
   const orderBy: Prisma.AppOrderByWithRelationInput[] =
     sort === "name"
       ? [{ pinned: "desc" }, { name: "asc" }]
       : sort === "downloads"
         ? [{ pinned: "desc" }, { downloadCount: "desc" }]
-        : [{ pinned: "desc" }, { updatedAt: "desc" }];
+        : [{ pinned: "desc" }, { createdAt: "desc" }];
 
   const apps = await prisma.app.findMany({
     where,
@@ -229,6 +230,22 @@ export async function listPublicApps(filters: AppListFilters): Promise<AppCardDt
       developer: { select: { id: true, username: true, displayName: true } },
     },
   });
+
+  if (sort === "recent") {
+    /**
+     * 计算应用的版本发布时间：优先当前版本发布时间，未发布版本时回退到应用创建时间。
+     * @param app 含当前版本的应用记录
+     * @returns 毫秒时间戳
+     */
+    const releaseTime = (app: (typeof apps)[number]) => {
+      const current = app.releases[0];
+      return (current?.publishedAt ?? app.createdAt).getTime();
+    };
+    apps.sort((a, b) => {
+      if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+      return releaseTime(b) - releaseTime(a);
+    });
+  }
 
   return apps.map(toCard);
 }

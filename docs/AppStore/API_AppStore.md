@@ -28,7 +28,7 @@
 | `category` | 分类精确匹配 |
 | `tag` | 标签精确匹配 |
 | `type` | `ANDROID` / `WEB` |
-| `sort` | `recent`（默认）/ `name` / `downloads`；置顶应用始终优先 |
+| `sort` | `recent`（默认，按新版本发布时间倒序，编辑资料不影响）/ `name` / `downloads`；置顶应用始终优先 |
 
 ```bash
 curl "$BASE_URL/api/public/apps?type=ANDROID&sort=downloads"

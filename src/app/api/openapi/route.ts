@@ -100,7 +100,12 @@ export async function GET(request: Request): Promise<Response> {
             { name: "category", in: "query", schema: { type: "string" } },
             { name: "tag", in: "query", schema: { type: "string" } },
             { name: "type", in: "query", schema: { type: "string", enum: ["ANDROID", "WEB"] } },
-            { name: "sort", in: "query", schema: { type: "string", enum: ["recent", "name", "downloads"] } },
+            {
+              name: "sort",
+              in: "query",
+              description: "recent 按新版本发布时间倒序，编辑应用资料不会改变顺序",
+              schema: { type: "string", enum: ["recent", "name", "downloads"] },
+            },
           ],
           responses: {
             "200": {

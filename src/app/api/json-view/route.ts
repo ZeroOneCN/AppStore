@@ -199,9 +199,10 @@ export async function GET(request: Request): Promise<Response> {
     }), 400);
   }
 
-  let targetUrl: URL;
+  // 仅接受站内相对路径，禁止 //evil.com 与绝对地址
+  let parsedTarget: URL;
   try {
-    targetUrl = new URL(target, url.origin);
+    parsedTarget = new URL(target, "http://internal.local");
   } catch {
     return htmlResponse(renderPage({
       target,
@@ -213,7 +214,10 @@ export async function GET(request: Request): Promise<Response> {
     }), 400);
   }
 
-  if (targetUrl.origin !== url.origin || BLOCKED_PREFIXES.some((prefix) => targetUrl.pathname.startsWith(prefix))) {
+  if (
+    parsedTarget.origin !== "http://internal.local" ||
+    BLOCKED_PREFIXES.some((prefix) => parsedTarget.pathname.startsWith(prefix))
+  ) {
     return htmlResponse(renderPage({
       target,
       status: 400,
@@ -223,6 +227,13 @@ export async function GET(request: Request): Promise<Response> {
       message: "该地址不支持在 JSON 视图中查看",
     }), 400);
   }
+
+  // 通过本机回环访问自身接口，避免反向代理下再绕一圈公网或 HTTPS
+  const internalOrigin = (
+    process.env.INTERNAL_ORIGIN ?? `http://127.0.0.1:${process.env.PORT ?? 3000}`
+  ).replace(/\/$/, "");
+  const targetUrl = new URL(target, internalOrigin);
+  const rawUrl = `${target}${target.includes("?") ? "&" : "?"}format=json`;
 
   // 转发登录会话，便于查看后台接口的返回结构
   const headers = new Headers({ accept: "application/json" });
@@ -238,13 +249,10 @@ export async function GET(request: Request): Promise<Response> {
       status: 502,
       statusText: "Bad Gateway",
       body: "",
-      rawUrl: `${target}${target.includes("?") ? "&" : "?"}format=json`,
-      message: "无法连接目标接口，请稍后重试",
+      rawUrl,
+      message: `无法连接目标接口（${internalOrigin}），请检查服务端口或 INTERNAL_ORIGIN 配置`,
     }), 502);
   }
-
-  const rawUrl = new URL(targetUrl);
-  rawUrl.searchParams.set("format", "json");
 
   const contentType = upstream.headers.get("content-type") ?? "";
   if (!contentType.includes("application/json")) {
@@ -253,12 +261,25 @@ export async function GET(request: Request): Promise<Response> {
       status: upstream.status,
       statusText: upstream.statusText,
       body: "",
-      rawUrl: rawUrl.toString(),
+      rawUrl,
       message: "该地址不是 JSON 接口，未做美化处理",
     }), upstream.status);
   }
 
-  const text = await upstream.text();
+  let text: string;
+  try {
+    text = await upstream.text();
+  } catch {
+    return htmlResponse(renderPage({
+      target,
+      status: 502,
+      statusText: "Bad Gateway",
+      body: "",
+      rawUrl,
+      message: "读取接口响应失败，请稍后重试",
+    }), 502);
+  }
+
   let pretty = text;
   try {
     pretty = JSON.stringify(JSON.parse(text), null, 2);
@@ -271,6 +292,6 @@ export async function GET(request: Request): Promise<Response> {
     status: upstream.status,
     statusText: upstream.statusText,
     body: pretty,
-    rawUrl: rawUrl.toString(),
+    rawUrl,
   }), upstream.status);
 }

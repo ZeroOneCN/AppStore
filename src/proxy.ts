@@ -31,7 +31,10 @@ export function proxy(request: NextRequest): NextResponse {
   // 浏览器访问 JSON 接口时重写到美化视图，接口本身仍按原始 JSON 输出
   if (request.method === "GET" && shouldRenderJsonView(request)) {
     const target = `${request.nextUrl.pathname}${request.nextUrl.search}`;
-    const headers = new Headers(request.headers);
+    // 只转发会话与目标路径，避免把 Host、Connection 等逐跳头带入内部改写
+    const headers = new Headers();
+    const cookie = request.headers.get("cookie");
+    if (cookie) headers.set("cookie", cookie);
     headers.set("x-json-view-target", target);
     return NextResponse.rewrite(new URL("/api/json-view", request.url), {
       request: { headers },
