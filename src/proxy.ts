@@ -36,7 +36,13 @@ export function proxy(request: NextRequest): NextResponse {
     const cookie = request.headers.get("cookie");
     if (cookie) headers.set("cookie", cookie);
     headers.set("x-json-view-target", target);
-    return NextResponse.rewrite(new URL("/api/json-view", request.url), {
+    // 反向代理会带上 X-Forwarded-Proto: https，导致改写地址变成 https://localhost:3000；
+    // 内部实际是 HTTP 服务，强制使用本机 HTTP 地址，避免 TLS 握手失败返回 500
+    const internalOrigin = (
+      process.env.INTERNAL_ORIGIN ??
+      `http://127.0.0.1:${process.env.PORT ?? request.nextUrl.port ?? "3000"}`
+    ).replace(/\/$/, "");
+    return NextResponse.rewrite(new URL("/api/json-view", internalOrigin), {
       request: { headers },
     });
   }

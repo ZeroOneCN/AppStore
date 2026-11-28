@@ -704,3 +704,13 @@ HTTP 冒烟实测明细（种子数据：`smoke-pack`，真实 APK 4026 版，�
 | 字段定位 | 通过 | 自动平滑滚动到第一个缺失字段并聚焦，用户无需手动回到页面顶部查找 |
 | 覆盖范围 | 通过 | 管理员 `/admin/apps/new` 与开发者 `/developer/apps/new` 共用同一向导，行为一致 |
 | 质量 | 通过 | `typecheck`、`lint`、`build` 通过；SSR 页面已渲染必填标记 |
+
+### 云端 JSON 视图修复（B49）
+
+| 项目 | 结果 | 证据 |
+|---|---|---|
+| 问题复现 | 通过 | 云端 `GET /api/update/check`（`Accept: text/html`）返回 500，响应头 `x-middleware-rewrite: https://localhost:3000/api/json-view` |
+| 原因 | 通过 | Nginx 携带 `X-Forwarded-Proto: https`，Next 将改写地址构造成 https，而内部服务为 HTTP，TLS 握手失败 |
+| 修复 | 通过 | 改写目标改为 `http://127.0.0.1:${PORT:-3000}`（可用 `INTERNAL_ORIGIN` 覆盖），本地模拟云端请求头后改写头变为 `http://localhost:3000/api/json-view`，返回 200 |
+| 回归 | 通过 | 原始 JSON 仍为 200 `application/json`；`?format=json` 正常；在线试试返回 200 `text/html` |
+| 质量 | 通过 | `typecheck`、`lint`、`build` 通过 |
