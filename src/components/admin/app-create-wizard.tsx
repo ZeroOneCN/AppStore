@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { checkApkFile } from "@/lib/apk-file";
 import { formatBytes } from "@/lib/format";
 import { generateSlug } from "@/lib/slug";
@@ -33,6 +33,21 @@ interface StageResponse {
 
 /** 向导步骤 */
 type WizardStep = 1 | 2 | 3;
+
+/**
+ * 必填项标记：红色星号并对读屏软件说明。
+ * @returns 星号元素
+ */
+function RequiredMark() {
+  return (
+    <>
+      <span aria-hidden className="ml-0.5 text-rose-500">
+        *
+      </span>
+      <span className="sr-only">（必填）</span>
+    </>
+  );
+}
 
 /** 步骤标题 */
 const STEP_LABELS: Array<{ step: WizardStep; title: string }> = [
@@ -89,6 +104,52 @@ export function AppCreateWizard({
   const [changelog, setChangelog] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** 顶部浮动提示，避免用户停留在页面下方时看不到校验错误 */
+  const [toast, setToast] = useState<string | null>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimer.current) clearTimeout(toastTimer.current);
+    };
+  }, []);
+
+  /**
+   * 展示顶部提示并在 3 秒后自动消失。
+   * @param message 提示文案
+   * @returns 无
+   */
+  function showToast(message: string): void {
+    setToast(message);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(null), 3200);
+  }
+
+  /**
+   * 记录错误并同步弹出提示。
+   * @param message 错误文案
+   * @returns 无
+   */
+  function notifyError(message: string): void {
+    setError(message);
+    showToast(message);
+  }
+
+  /**
+   * 必填校验失败：记录错误、弹出提示并滚动到对应字段。
+   * @param message 错误文案
+   * @param fieldId 目标字段的 DOM id
+   * @returns 无
+   */
+  function failValidation(message: string, fieldId?: string): void {
+    notifyError(message);
+    if (!fieldId) return;
+    const field = document.getElementById(fieldId);
+    field?.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement) {
+      setTimeout(() => field.focus({ preventScroll: true }), 320);
+    }
+  }
   /** 创建成功后的结果，用于展示完成提示与跳转入口 */
   const [success, setSuccess] = useState<{
     id: string;
@@ -191,14 +252,15 @@ export function AppCreateWizard({
    */
   function goReview(): void {
     setError(null);
-    if (!name.trim()) return setError("请填写应用名称");
-    if (!summary.trim()) return setError("请填写一句话简介");
-    if (!category.trim()) return setError("请填写分类");
+    if (!name.trim()) return failValidation("请填写应用名称", "create-name");
+    if (!summary.trim()) return failValidation("请填写一句话简介", "create-summary");
+    if (!category.trim()) return failValidation("请填写分类", "create-category");
     if (type === "WEB" && !/^https?:\/\//i.test(webUrl.trim())) {
-      return setError("请填写以 http:// 或 https:// 开头的访问链接");
+      return failValidation("请填写以 http:// 或 https:// 开头的访问链接", "create-web-url");
     }
     if (type === "ANDROID" && !staged) {
-      return setError("安装包尚未解析，请返回第一步重新上传");
+      setStep(1);
+      return notifyError("安装包尚未解析，请返回第一步重新上传");
     }
     if (!slug.trim()) setSlug(generateSlug(name));
     setStep(3);
@@ -245,7 +307,7 @@ export function AppCreateWizard({
 
       const data: unknown = await response.json().catch(() => null);
       if (!response.ok) {
-        setError(errorMessageOf(data, "创建失败，请检查填写内容"));
+        notifyError(errorMessageOf(data, "创建失败，请检查填写内容"));
         return;
       }
 
@@ -266,7 +328,7 @@ export function AppCreateWizard({
         published: type === "ANDROID",
       });
     } catch {
-      setError("网络异常，请检查连接后重试");
+      notifyError("网络异常，请检查连接后重试");
     } finally {
       setSubmitting(false);
     }
@@ -328,6 +390,15 @@ export function AppCreateWizard({
 
   return (
     <div className="space-y-5">
+      {toast ? (
+        <div
+          role="alert"
+          aria-live="assertive"
+          className="fixed top-5 left-1/2 z-50 w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 rounded-xl bg-rose-600 px-4 py-3 text-center text-sm font-medium text-white shadow-[0_18px_40px_-16px_rgba(190,18,60,0.75)]"
+        >
+          {toast}
+        </div>
+      ) : null}
       <ol className="grid gap-2 sm:grid-cols-3">
         {STEP_LABELS.map((item) => {
           const active = step === item.step;
@@ -393,6 +464,7 @@ export function AppCreateWizard({
               <div>
                 <label htmlFor="create-apk" className={labelClass}>
                   APK 文件
+                  <RequiredMark />
                   <HelpTip text="先上传解析包名与版本号，确认无误后再填写应用内容并发布。" />
                 </label>
                 <input
@@ -482,6 +554,7 @@ export function AppCreateWizard({
             <div>
               <label htmlFor="create-name" className={labelClass}>
                 应用名称
+                <RequiredMark />
               </label>
               <input
                 id="create-name"
@@ -514,6 +587,7 @@ export function AppCreateWizard({
             <div className="sm:col-span-2">
               <label htmlFor="create-summary" className={labelClass}>
                 一句话简介
+                <RequiredMark />
               </label>
               <input
                 id="create-summary"
@@ -543,6 +617,7 @@ export function AppCreateWizard({
             <div>
               <label htmlFor="create-category" className={labelClass}>
                 分类
+                <RequiredMark />
               </label>
               <input
                 id="create-category"
@@ -595,6 +670,7 @@ export function AppCreateWizard({
               <div className="sm:col-span-2">
                 <label htmlFor="create-web-url" className={labelClass}>
                   访问链接
+                  <RequiredMark />
                 </label>
                 <input
                   id="create-web-url"
